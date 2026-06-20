@@ -31,7 +31,13 @@ local ScriptLinks = {
 
     {
         GameUrl = "https://www.roblox.com/games/114204398207377/Survive-Zombie-Arena",
-                  "https://www.roblox.com/games/98927955463992/Arena",
+        Code = [[
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDSurviveZombieArena/init"))()
+        ]]
+    },
+
+    {
+        GameUrl = "https://www.roblox.com/games/98927955463992/Arena",
         Code = [[
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDSurviveZombieArena/init"))()
         ]]
