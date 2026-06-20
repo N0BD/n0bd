@@ -1,0 +1,150 @@
+local DISCORD_URL = "https://discord.gg/n0bd"
+
+local NO_SCRIPT_TEXT = [[
+No Script found for this Game!
+
+if you want to suggest this game, join the discord and suggest it :)
+]]
+
+local function getPlaceIdFromUrl(url)
+    return tonumber(
+        string.match(url, "roblox%.com/games/(%d+)") or
+        string.match(url, "/games/(%d+)") or
+        string.match(url, "placeId=(%d+)")
+    )
+end
+
+local ScriptLinks = {
+    {
+        GameUrl = "https://www.roblox.com/games/92416421522960/Slime-RNG",
+        Code = [[
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDSlimeRNG/init"))()
+        ]]
+    },
+
+    {
+        GameUrl = "https://www.roblox.com/games/8737899170/Pet-Simulator-99",
+        Code = [[
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDPS99StairwayOfHeaven/init"))()
+        ]]
+    },
+
+    {
+        GameUrl = "https://www.roblox.com/games/114204398207377/Survive-Zombie-Arena",
+        Code = [[
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDSurviveZombieArena/init"))()
+        ]]
+    },
+}
+
+local Scripts = {}
+
+for _, entry in ipairs(ScriptLinks) do
+    local placeId = getPlaceIdFromUrl(entry.GameUrl)
+
+    if placeId then
+        Scripts[placeId] = entry.Code
+    else
+        warn("Invalid Roblox game URL:", entry.GameUrl)
+    end
+end
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local oldGui = playerGui:FindFirstChild("NoScriptPopup")
+if oldGui then
+    oldGui:Destroy()
+end
+
+local currentPlaceId = game.PlaceId
+local scriptCode = Scripts[currentPlaceId]
+
+if scriptCode then
+    local success, err = pcall(function()
+        loadstring(scriptCode)()
+    end)
+
+    if not success then
+        warn("Script failed:", err)
+    end
+
+    return
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "NoScriptPopup"
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.fromOffset(380, 230)
+frame.Position = UDim2.new(0.5, -190, 0.5, -115)
+frame.BackgroundColor3 = Color3.fromRGB(15, 20, 35)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -70, 0, 35)
+title.Position = UDim2.fromOffset(15, 12)
+title.BackgroundTransparency = 1
+title.Text = "No Script Found"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Parent = frame
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.fromOffset(32, 32)
+closeBtn.Position = UDim2.new(1, -42, 0, 10)
+closeBtn.BackgroundColor3 = Color3.fromRGB(35, 45, 65)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 100, 120)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.Parent = frame
+
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
+
+closeBtn.MouseButton1Click:Connect(function()
+    gui:Destroy()
+end)
+
+local message = Instance.new("TextLabel")
+message.Size = UDim2.new(1, -30, 0, 90)
+message.Position = UDim2.fromOffset(15, 58)
+message.BackgroundColor3 = Color3.fromRGB(25, 35, 55)
+message.TextColor3 = Color3.fromRGB(230, 230, 230)
+message.Text = NO_SCRIPT_TEXT .. "\nPlaceId: " .. tostring(currentPlaceId)
+message.Font = Enum.Font.Gotham
+message.TextSize = 14
+message.TextWrapped = true
+message.TextYAlignment = Enum.TextYAlignment.Center
+message.Parent = frame
+
+Instance.new("UICorner", message).CornerRadius = UDim.new(0, 8)
+
+local discordBtn = Instance.new("TextButton")
+discordBtn.Size = UDim2.new(1, -30, 0, 40)
+discordBtn.Position = UDim2.fromOffset(15, 170)
+discordBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+discordBtn.Text = "Copy Discord Link"
+discordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+discordBtn.Font = Enum.Font.GothamBold
+discordBtn.TextSize = 14
+discordBtn.Parent = frame
+
+Instance.new("UICorner", discordBtn).CornerRadius = UDim.new(0, 8)
+
+discordBtn.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(DISCORD_URL)
+        discordBtn.Text = "Discord copied!"
+    else
+        discordBtn.Text = "Clipboard unavailable"
+    end
+end)
