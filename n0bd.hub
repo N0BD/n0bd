@@ -18,28 +18,28 @@ local ScriptLinks = {
     {
         GameUrl = "https://www.roblox.com/games/92416421522960/Slime-RNG",
         Code = [[
-            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDSlimeRNG/init"))()
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdSlimeRNG/init"))()
         ]]
     },
 
     {
         GameUrl = "https://www.roblox.com/games/8737899170/Pet-Simulator-99",
         Code = [[
-            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDPS99StairwayOfHeaven/init"))()
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdPs99StairwayOfHeaven/init"))()
         ]]
     },
 
     {
         GameUrl = "https://www.roblox.com/games/114204398207377/Survive-Zombie-Arena",
         Code = [[
-            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDSurviveZombieArena/init"))()
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdSurviveZombieArena/init"))()
         ]]
     },
 
     {
         GameUrl = "https://www.roblox.com/games/98927955463992/Arena",
         Code = [[
-            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/N0BDSurviveZombieArena/init"))()
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdSurviveZombieArena/init"))()
         ]]
     },
 }
