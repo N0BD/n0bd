@@ -42,6 +42,13 @@ local ScriptLinks = {
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdSurviveZombieArena/init"))()
         ]]
     },
+
+     {
+        GameUrl = "https://www.roblox.com/games/107646426076756/Build-A-Ring-Farm",
+        Code = [[
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdBuildARigFarm/init"))()
+        ]]
+    },
 }
 
 local Scripts = {}
