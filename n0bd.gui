@@ -34,7 +34,7 @@ end
 local function runUi(playerGui)
     local player = Players.LocalPlayer
 
-    local WINDOW_SIZE       = Vector2.new(760, 460)
+    local WINDOW_SIZE       = Vector2.new(760, 480)
     local MINI_SIZE         = Vector2.new(160, 44)
     local TOP_H             = 52
     local RADIUS            = 18
@@ -49,22 +49,25 @@ local function runUi(playerGui)
     local TOGGLE_KEY        = Enum.KeyCode.RightShift
     local ANTI_AFK_INTERVAL = 300
 
+    -- Verbesserte Farbpalette
     local Theme = {
-        BG         = Color3.fromRGB(8,   12,  24),
-        Top        = Color3.fromRGB(12,  20,  40),
-        Panel      = Color3.fromRGB(13,  25,  50),
-        Card       = Color3.fromRGB(15,  30,  60),
-        CardHover  = Color3.fromRGB(21,  42,  84),
-        CardActive = Color3.fromRGB(20,  48,  96),
-        Stroke     = Color3.fromRGB(46,  105, 235),
+        BG         = Color3.fromRGB(10, 14, 28),
+        Top        = Color3.fromRGB(14, 22, 44),
+        Panel      = Color3.fromRGB(16, 28, 56),
+        Card       = Color3.fromRGB(18, 34, 68),
+        CardHover  = Color3.fromRGB(26, 50, 100),
+        CardActive = Color3.fromRGB(24, 56, 112),
+        Stroke     = Color3.fromRGB(46, 105, 235),
         Text       = Color3.fromRGB(232, 241, 255),
-        SubText    = Color3.fromRGB(154, 178, 210),
-        Accent     = Color3.fromRGB(0,   210, 255),
-        Danger     = Color3.fromRGB(255,  88, 116),
-        Muted      = Color3.fromRGB(18,   30,  58),
-        Success    = Color3.fromRGB(95,  235, 170),
-        ToggleOn   = Color3.fromRGB(14,   58,  90),
-        ToggleOff  = Color3.fromRGB(15,   30,  60),
+        SubText    = Color3.fromRGB(170, 190, 220),
+        Accent     = Color3.fromRGB(0, 210, 255),
+        Danger     = Color3.fromRGB(255, 88, 116),
+        Muted      = Color3.fromRGB(18, 30, 58),
+        Success    = Color3.fromRGB(95, 235, 170),
+        ToggleOn   = Color3.fromRGB(14, 58, 90),
+        ToggleOff  = Color3.fromRGB(15, 30, 60),
+        InputBg    = Color3.fromRGB(10, 20, 40),
+        Overlay    = Color3.fromRGB(0, 0, 0),
     }
 
     local old = playerGui:FindFirstChild("N0BD.HUB")
@@ -190,6 +193,8 @@ local function runUi(playerGui)
         Dividers = {},
         Tabs     = {},
         Pages    = {},
+        Dropdowns= {},
+        Inputs   = {},
     }
 
     local function componentId(value)
@@ -459,9 +464,8 @@ local function runUi(playerGui)
     controls.Size                   = offset(92, BTN_H)
     controls.Parent                 = topbar
 
-    -- FIX: "-" statt "─" (Unicode-Dash nicht unterstützt)
     local minimizeBtn = makeTopbarButton("-", Theme.Text, 40)
-    minimizeBtn.TextSize = 16  -- etwas größer damit "-" gut sichtbar ist
+    minimizeBtn.TextSize = 16
     minimizeBtn.Position = offset(0, 0)
     minimizeBtn.Parent   = controls
     register("Buttons", "Minimize", {
@@ -469,7 +473,6 @@ local function runUi(playerGui)
         Click  = function(cb) return trackConn(minimizeBtn.MouseButton1Click:Connect(cb)) end,
     })
 
-    -- FIX: "X" statt "✕" (Unicode-Kreuz nicht unterstützt in Gotham)
     local closeBtn = makeTopbarButton("X", Theme.Danger, 40)
     closeBtn.Position = offset(52, 0)
     closeBtn.Parent   = controls
@@ -478,7 +481,6 @@ local function runUi(playerGui)
         Click  = function(cb) return trackConn(closeBtn.MouseButton1Click:Connect(cb)) end,
     })
 
-    -- FIX: "Open Hub" statt "▲  Open Hub" (Dreieck-Symbol kaputt)
     local restoreBtn = makeTopbarButton("N0BD.Hub", Theme.Accent, MINI_SIZE.X - 16)
     restoreBtn.Name        = "Restore"
     restoreBtn.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -513,10 +515,28 @@ local function runUi(playerGui)
     stroke(sidebar, Theme.Stroke, 0.86, 1)
     pad(sidebar, 10, 10, 10, 10)
 
+    -- Sidebar ScrollingFrame für Tabs
+    local sidebarScroll = Instance.new("ScrollingFrame")
+    sidebarScroll.Name = "SidebarScroll"
+    sidebarScroll.Size = UDim2.new(1, 0, 1, 0)
+    sidebarScroll.BackgroundTransparency = 1
+    sidebarScroll.BorderSizePixel = 0
+    sidebarScroll.ScrollBarThickness = 4
+    sidebarScroll.ScrollBarImageTransparency = 0.5
+    sidebarScroll.Parent = sidebar
+    sidebarScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+
     local sidebarList = Instance.new("UIListLayout")
     sidebarList.SortOrder = Enum.SortOrder.LayoutOrder
     sidebarList.Padding   = UDim.new(0, 6)
-    sidebarList.Parent    = sidebar
+    sidebarList.Parent    = sidebarScroll
+
+    local function updateSidebarCanvas()
+        local h = sidebarList.AbsoluteContentSize.Y
+        sidebarScroll.CanvasSize = UDim2.new(0, 0, 0, h + 10)
+    end
+    trackConn(sidebarList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateSidebarCanvas))
+    task.defer(updateSidebarCanvas)
 
     local content = Instance.new("Frame")
     content.Name             = "Content"
@@ -590,8 +610,6 @@ local function runUi(playerGui)
     local function createTab(name, icon)
         if pages[name] then return pages[name] end
 
-        -- FIX: Icon nur wenn es ein kompatibles Zeichen ist
-        -- "⚙" (U+2699) funktioniert in Roblox, andere evtl. nicht
         local displayText = icon and (icon .. "  " .. name) or ("  " .. name)
         tabOrder += 1
 
@@ -610,7 +628,7 @@ local function runUi(playerGui)
         tab.LineHeight       = 1
         tab.Text             = displayText
         tab.LayoutOrder      = tabOrder
-        tab.Parent           = sidebar
+        tab.Parent           = sidebarScroll
         corner(tab, BTN_RADIUS)
         stroke(tab, Theme.Stroke, 0.88, 1)
         pad(tab, 0, 10, 0, 10)
@@ -653,8 +671,7 @@ local function runUi(playerGui)
         header.TextXAlignment         = Enum.TextXAlignment.Left
         header.TextYAlignment         = Enum.TextYAlignment.Center
         header.TextTruncate           = Enum.TextTruncate.AtEnd
-        -- FIX: "-- " statt "▸  " – Pfeil-Symbol wird als Box angezeigt
-        header.Text                   = "" .. text
+        header.Text                   = "▪ " .. text
         header.Parent                 = page.Stack
         register("Headers", opts.Id, { Label = header, Text = header })
         return header
@@ -1105,8 +1122,335 @@ local function runUi(playerGui)
         return label
     end
 
+    -- ── DROPDOWN (repariert) ──────────────────────────────────────
+    local function createDropdownCard(page, title, options, default, callback, opts)
+        opts = readOptions(opts, title)
+        if type(options) ~= "table" or #options == 0 then
+            error("Dropdown options must be a non-empty table")
+        end
+        local selectedValue = default or options[1]
+        local selectedIndex = 1
+        for i, v in ipairs(options) do
+            if v == selectedValue then selectedIndex = i; break end
+        end
+
+        local card = Instance.new("Frame")
+        card.Name             = (title:gsub("%s+", "")) .. "DropdownCard"
+        card.BackgroundColor3 = Theme.Card
+        card.BorderSizePixel  = 0
+        card.Size             = UDim2.new(1, 0, 0, 60)
+        card.ClipsDescendants = false
+        card.Parent           = page.Stack
+        corner(card, CARD_RADIUS)
+        stroke(card, Theme.Stroke, 0.85, 1)
+        pad(card, CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
+
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Size                   = UDim2.new(0.45, 0, 1, 0)
+        titleLabel.Font                   = Enum.Font.GothamSemibold
+        titleLabel.TextSize               = 13
+        titleLabel.TextColor3             = Theme.Text
+        titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
+        titleLabel.TextYAlignment         = Enum.TextYAlignment.Center
+        titleLabel.TextTruncate           = Enum.TextTruncate.AtEnd
+        titleLabel.Text                   = title
+        titleLabel.Parent                 = card
+
+        -- Button + Dropdown-Pfeil
+        local valueBtn = Instance.new("TextButton")
+        valueBtn.AutoButtonColor  = false
+        valueBtn.BackgroundColor3 = Theme.InputBg
+        valueBtn.BorderSizePixel  = 0
+        valueBtn.AnchorPoint      = Vector2.new(1, 0.5)
+        valueBtn.Position         = UDim2.new(1, 0, 0.5, 0)
+        valueBtn.Size             = offset(160, BTN_H)
+        valueBtn.Font             = Enum.Font.GothamSemibold
+        valueBtn.TextSize         = 12
+        valueBtn.TextColor3       = Theme.Text
+        valueBtn.TextXAlignment   = Enum.TextXAlignment.Left
+        valueBtn.TextYAlignment   = Enum.TextYAlignment.Center
+        valueBtn.TextTruncate     = Enum.TextTruncate.AtEnd
+        valueBtn.Text             = "  " .. tostring(selectedValue)
+        valueBtn.Parent           = card
+        corner(valueBtn, BTN_RADIUS)
+        stroke(valueBtn, Theme.Stroke, 0.70, 1)
+        pad(valueBtn, 0, 8, 0, 8)
+
+        local arrow = Instance.new("TextLabel")
+        arrow.BackgroundTransparency = 1
+        arrow.AnchorPoint            = Vector2.new(1, 0.5)
+        arrow.Position               = UDim2.new(1, -6, 0.5, 0)
+        arrow.Size                   = offset(16, 16)
+        arrow.Font                   = Enum.Font.GothamBold
+        arrow.TextSize               = 14
+        arrow.TextColor3             = Theme.SubText
+        arrow.TextXAlignment         = Enum.TextXAlignment.Center
+        arrow.TextYAlignment         = Enum.TextYAlignment.Center
+        arrow.Text                   = "▾"
+        arrow.Parent                 = valueBtn
+
+        -- Dropdown Popup
+        local popup
+        local function closePopup()
+            if popup then popup:Destroy(); popup = nil end
+        end
+
+        local function openPopup()
+            if popup then closePopup() end
+
+            local absPos = valueBtn.AbsolutePosition
+            local absSize = valueBtn.AbsoluteSize
+            if absPos.X == 0 and absPos.Y == 0 then
+                task.wait(0.05)
+                absPos = valueBtn.AbsolutePosition
+                absSize = valueBtn.AbsoluteSize
+            end
+
+            local popupWidth = 180
+            local popupHeight = math.min(#options * 32 + 8, 160)
+            local x = absPos.X + absSize.X - popupWidth
+            local y = absPos.Y + absSize.Y + 2
+            local vp = getViewport()
+            if x + popupWidth > vp.X then x = vp.X - popupWidth - 4 end
+            if y + popupHeight > vp.Y then y = absPos.Y - popupHeight - 2 end
+
+            popup = Instance.new("Frame")
+            popup.Name               = "DropdownPopup"
+            popup.BackgroundColor3   = Theme.Overlay
+            popup.BackgroundTransparency = 0.25
+            popup.BorderSizePixel    = 0
+            popup.Size               = offset(popupWidth, popupHeight)
+            popup.Position           = offset(x, y)
+            popup.ZIndex             = 60
+            popup.Parent             = gui
+            corner(popup, 8)
+            stroke(popup, Theme.Stroke, 0.35, 2)
+            local bg = Instance.new("Frame")
+            bg.BackgroundColor3 = Theme.Panel
+            bg.BorderSizePixel  = 0
+            bg.Size             = UDim2.new(1, 0, 1, 0)
+            bg.Parent           = popup
+            corner(bg, 8)
+            bg.ZIndex = 0
+
+            local list = Instance.new("ScrollingFrame")
+            list.BackgroundTransparency = 1
+            list.BorderSizePixel        = 0
+            list.Size                   = UDim2.new(1, -4, 1, -4)
+            list.Position              = UDim2.new(0, 2, 0, 2)
+            list.CanvasSize             = UDim2.new(0, 0, 0, #options * 32)
+            list.ScrollBarThickness     = 3
+            list.ScrollingDirection     = Enum.ScrollingDirection.Y
+            list.Parent                 = popup
+            list.ZIndex                 = 1
+
+            local layout = Instance.new("UIListLayout")
+            layout.SortOrder = Enum.SortOrder.LayoutOrder
+            layout.Padding   = UDim.new(0, 2)
+            layout.Parent    = list
+
+            for i, opt in ipairs(options) do
+                local btn = Instance.new("TextButton")
+                btn.AutoButtonColor  = false
+                btn.BackgroundColor3 = (i == selectedIndex) and Theme.CardActive or Theme.Card
+                btn.BorderSizePixel  = 0
+                btn.Size             = UDim2.new(1, 0, 0, 30)
+                btn.Font             = Enum.Font.GothamSemibold
+                btn.TextSize         = 12
+                btn.TextColor3       = (i == selectedIndex) and Theme.Accent or Theme.Text
+                btn.TextXAlignment   = Enum.TextXAlignment.Left
+                btn.TextYAlignment   = Enum.TextYAlignment.Center
+                btn.TextTruncate     = Enum.TextTruncate.AtEnd
+                btn.Text             = "  " .. tostring(opt)
+                btn.Parent           = list
+                corner(btn, 6)
+                stroke(btn, Theme.Stroke, 0.85, 1)
+
+                trackConn(btn.MouseEnter:Connect(function()
+                    if selectedIndex ~= i then
+                        tween(btn, 0.08, { BackgroundColor3 = Theme.CardHover })
+                    end
+                end))
+                trackConn(btn.MouseLeave:Connect(function()
+                    if selectedIndex ~= i then
+                        tween(btn, 0.08, { BackgroundColor3 = Theme.Card })
+                    end
+                end))
+                trackConn(btn.MouseButton1Click:Connect(function()
+                    selectedValue = opt
+                    selectedIndex = i
+                    valueBtn.Text = "  " .. tostring(opt)
+                    closePopup()
+                    if callback then task.spawn(callback, opt) end
+                end))
+            end
+        end
+
+        trackConn(valueBtn.MouseButton1Click:Connect(function()
+            if popup then closePopup() else openPopup() end
+        end))
+
+        trackConn(UserInputService.InputBegan:Connect(function(input, processed)
+            if processed then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                if popup then
+                    local mousePos = input.Position
+                    local absPos = popup.AbsolutePosition
+                    local absSize = popup.AbsoluteSize
+                    if not (mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X and
+                            mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y) then
+                        closePopup()
+                    end
+                end
+            end
+        end))
+
+        local dropdown = {
+            Get = function() return selectedValue end,
+            GetIndex = function() return selectedIndex end,
+            Set = function(value)
+                for i, opt in ipairs(options) do
+                    if opt == value then
+                        selectedValue = value
+                        selectedIndex = i
+                        valueBtn.Text = "  " .. tostring(value)
+                        if callback then task.spawn(callback, value) end
+                        break
+                    end
+                end
+            end,
+            SetIndex = function(idx)
+                if options[idx] then
+                    selectedValue = options[idx]
+                    selectedIndex = idx
+                    valueBtn.Text = "  " .. tostring(selectedValue)
+                    if callback then task.spawn(callback, selectedValue) end
+                end
+            end,
+            Options = options,
+            Card = card,
+            Button = valueBtn,
+            Title = titleLabel,
+            IsVisible = function() return card.Visible end,
+            SetVisible = function(v) card.Visible = v end,
+        }
+
+        register("Dropdowns", opts.Id, dropdown, opts.Aliases)
+        return dropdown
+    end
+
+    -- ── TEXTINPUT (repariert) ────────────────────────────────────
+    local function createTextInputCard(page, title, placeholder, buttonText, callback, opts)
+        opts = readOptions(opts, title)
+        local currentValue = ""
+
+        local card = Instance.new("Frame")
+        card.Name = (title:gsub("%s+", "")) .. "TextInputCard"
+        card.BackgroundColor3 = Theme.Card
+        card.BorderSizePixel = 0
+        card.Size = UDim2.new(1, 0, 0, 70)
+        card.ClipsDescendants = false
+        card.Parent = page.Stack
+        corner(card, CARD_RADIUS)
+        stroke(card, Theme.Stroke, 0.85, 1)
+        pad(card, CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
+
+        local titleLabel = Instance.new("TextLabel")
+        titleLabel.BackgroundTransparency = 1
+        titleLabel.Size = UDim2.new(1, 0, 0, 20)
+        titleLabel.Font = Enum.Font.GothamSemibold
+        titleLabel.TextSize = 13
+        titleLabel.TextColor3 = Theme.Text
+        titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        titleLabel.TextYAlignment = Enum.TextYAlignment.Center
+        titleLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        titleLabel.Text = title
+        titleLabel.Parent = card
+
+        local row = Instance.new("Frame")
+        row.BackgroundTransparency = 1
+        row.Position = UDim2.new(0, 0, 0, 24)
+        row.Size = UDim2.new(1, 0, 0, 32)
+        row.Parent = card
+
+        local box = Instance.new("TextBox")
+        box.BackgroundColor3 = Theme.InputBg
+        box.BorderSizePixel = 0
+        box.Size = UDim2.new(1, -90, 1, 0)
+        box.Font = Enum.Font.Gotham
+        box.TextSize = 13
+        box.TextColor3 = Theme.Text
+        box.TextXAlignment = Enum.TextXAlignment.Left
+        box.TextYAlignment = Enum.TextYAlignment.Center
+        box.TextTruncate = Enum.TextTruncate.AtEnd
+        box.PlaceholderText = placeholder or "Enter text..."
+        box.Text = ""
+        box.ClearTextOnFocus = false
+        box.Parent = row
+        corner(box, 8)
+        stroke(box, Theme.Stroke, 0.70, 1)
+        pad(box, 0, 10, 0, 10)
+
+        local btn = Instance.new("TextButton")
+        btn.AutoButtonColor = false
+        btn.AnchorPoint = Vector2.new(1, 0.5)
+        btn.Position = UDim2.new(1, 0, 0.5, 0)
+        btn.Size = offset(80, BTN_H)
+        btn.BackgroundColor3 = Theme.Card
+        btn.BorderSizePixel = 0
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 12
+        btn.TextColor3 = Theme.Text
+        btn.Text = buttonText or "Send"
+        btn.TextXAlignment = Enum.TextXAlignment.Center
+        btn.TextYAlignment = Enum.TextYAlignment.Center
+        btn.TextTruncate = Enum.TextTruncate.AtEnd
+        btn.Parent = row
+        setButtonBaseColor(btn, Theme.Card)
+        corner(btn, BTN_RADIUS)
+        stroke(btn, Theme.Stroke, 0.80, 1)
+
+        trackConn(btn.MouseEnter:Connect(function()
+            tween(btn, 0.10, { BackgroundColor3 = Theme.CardHover })
+        end))
+        trackConn(btn.MouseLeave:Connect(function()
+            tween(btn, 0.10, { BackgroundColor3 = getButtonBaseColor(btn) })
+        end))
+
+        local function submit()
+            local val = box.Text
+            if val == "" then val = placeholder or "" end
+            currentValue = val
+            if callback then task.spawn(callback, val) end
+        end
+
+        trackConn(btn.MouseButton1Click:Connect(submit))
+        trackConn(box.FocusLost:Connect(function(enterPressed)
+            if enterPressed then submit() end
+        end))
+
+        local input = {
+            Get = function() return currentValue end,
+            Set = function(v)
+                currentValue = tostring(v or "")
+                box.Text = currentValue
+                if callback then task.spawn(callback, currentValue) end
+            end,
+            Button = btn,
+            TextBox = box,
+            Card = card,
+            Title = titleLabel,
+            IsVisible = function() return card.Visible end,
+            SetVisible = function(v) card.Visible = v end,
+        }
+
+        register("Inputs", opts.Id, input, opts.Aliases)
+        return input
+    end
+
     -- ── BUILT-IN TABS ────────────────────────────────────────────
-    local mainPage = createTab("Main", "⚙ ")  -- FIX: kein Icon-Symbol, sauberer Text-Prefix
+    local mainPage = createTab("Main", "⚙")
 
     createHeader(mainPage, "⚙ UI Settings", "UISettingsHeader")
 
@@ -1275,7 +1619,7 @@ local function runUi(playerGui)
 
     -- ── GLOBAL API ───────────────────────────────────────────────
     getgenv().N0BD_UI = {
-        Version         = "2.3.1",
+        Version         = "2.5.2",
         Gui             = gui,
         Main            = main,
         Sidebar         = sidebar,
@@ -1291,6 +1635,8 @@ local function runUi(playerGui)
         Cards           = Components.Cards,
         Headers         = Components.Headers,
         Dividers        = Components.Dividers,
+        Dropdowns       = Components.Dropdowns,
+        Inputs          = Components.Inputs,
         ToggleKey       = TOGGLE_KEY,
         SetToggleKey    = function(key)
             TOGGLE_KEY = key
@@ -1312,12 +1658,16 @@ local function runUi(playerGui)
         GetDivider      = function(id) return getRegistered("Dividers", id) end,
         GetTab          = function(id) return getRegistered("Tabs",     id) end,
         GetPage         = function(id) return getRegistered("Pages",    id) end,
+        GetDropdown     = function(id) return getRegistered("Dropdowns", id) end,
+        GetInput        = function(id) return getRegistered("Inputs",    id) end,
         ListAll         = function() return Components.All end,
         ListButtons     = function() return Components.Buttons end,
         ListToggles     = function() return Components.Toggles end,
         ListSliders     = function() return Components.Sliders end,
         ListLabels      = function() return Components.Labels end,
         ListCards       = function() return Components.Cards end,
+        ListDropdowns   = function() return Components.Dropdowns end,
+        ListInputs      = function() return Components.Inputs end,
         RegisterComponent   = register,
         UnregisterComponent = unregister,
         ListComponents  = function(kind)
@@ -1333,6 +1683,8 @@ local function runUi(playerGui)
         AddSwitch       = createToggleCard,
         AddSlider       = createSliderCard,
         AddLabel        = createLabelCard,
+        AddDropdown     = createDropdownCard,
+        AddTextInput    = createTextInputCard,
         CreateHeader     = createHeader,
         CreateDivider    = createDivider,
         CreateCard       = createCard,
@@ -1340,6 +1692,8 @@ local function runUi(playerGui)
         CreateToggleCard = createToggleCard,
         CreateSliderCard = createSliderCard,
         CreateLabelCard  = createLabelCard,
+        CreateDropdown   = createDropdownCard,
+        CreateTextInput  = createTextInputCard,
     }
 
     getgenv().N0BD_Cleanup = function()
