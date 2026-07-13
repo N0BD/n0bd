@@ -1,3 +1,7 @@
+--[[
+  N0BD.HUB – Vollständige GUI (v2.5.2)
+  Enthält alle Komponenten: Tabs, Toggles, Slider, Dropdowns, TextInputs, Buttons, Labels, Header, Divider
+]]
 local Players          = game:GetService("Players")
 local RunService       = game:GetService("RunService")
 local TweenService     = game:GetService("TweenService")
@@ -49,7 +53,6 @@ local function runUi(playerGui)
     local TOGGLE_KEY        = Enum.KeyCode.RightShift
     local ANTI_AFK_INTERVAL = 300
 
-    -- Verbesserte Farbpalette
     local Theme = {
         BG         = Color3.fromRGB(10, 14, 28),
         Top        = Color3.fromRGB(14, 22, 44),
@@ -1122,7 +1125,7 @@ local function runUi(playerGui)
         return label
     end
 
-    -- ── DROPDOWN (repariert) ──────────────────────────────────────
+    -- ── DROPDOWN ────────────────────────────────────────────────────
     local function createDropdownCard(page, title, options, default, callback, opts)
         opts = readOptions(opts, title)
         if type(options) ~= "table" or #options == 0 then
@@ -1157,7 +1160,6 @@ local function runUi(playerGui)
         titleLabel.Text                   = title
         titleLabel.Parent                 = card
 
-        -- Button + Dropdown-Pfeil
         local valueBtn = Instance.new("TextButton")
         valueBtn.AutoButtonColor  = false
         valueBtn.BackgroundColor3 = Theme.InputBg
@@ -1190,7 +1192,6 @@ local function runUi(playerGui)
         arrow.Text                   = "▾"
         arrow.Parent                 = valueBtn
 
-        -- Dropdown Popup
         local popup
         local function closePopup()
             if popup then popup:Destroy(); popup = nil end
@@ -1198,7 +1199,6 @@ local function runUi(playerGui)
 
         local function openPopup()
             if popup then closePopup() end
-
             local absPos = valueBtn.AbsolutePosition
             local absSize = valueBtn.AbsoluteSize
             if absPos.X == 0 and absPos.Y == 0 then
@@ -1206,7 +1206,6 @@ local function runUi(playerGui)
                 absPos = valueBtn.AbsolutePosition
                 absSize = valueBtn.AbsoluteSize
             end
-
             local popupWidth = 180
             local popupHeight = math.min(#options * 32 + 8, 160)
             local x = absPos.X + absSize.X - popupWidth
@@ -1340,7 +1339,7 @@ local function runUi(playerGui)
         return dropdown
     end
 
-    -- ── TEXTINPUT (repariert) ────────────────────────────────────
+    -- ── TEXTINPUT ────────────────────────────────────────────────────
     local function createTextInputCard(page, title, placeholder, buttonText, callback, opts)
         opts = readOptions(opts, title)
         local currentValue = ""
