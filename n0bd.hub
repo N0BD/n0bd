@@ -66,7 +66,7 @@ local ScriptLinks = {
     },
 -- Animal Hospital Ingame
     {
-        GameUrl = "https://www.roblox.com/games/78515283254292/Animal-Hospital",
+        GameUrl = "https://www.roblox.com/games/104522435597696",
         Code = [[
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdAnimalHospital/init"))()
         ]]
