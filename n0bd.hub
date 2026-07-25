@@ -52,7 +52,7 @@ local ScriptLinks = {
     },
 -- Gag2
     {
-        GameUrl = "https://www.roblox.com/games/97598239454123/Grow-a-Garden-2",
+        GameUrl = "https://www.roblox.com/games/73504898027860/Grow-a-Garden-2",
         Code = [[
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdGrowAGarden2/init"))()
         ]]
