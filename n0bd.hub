@@ -15,38 +15,60 @@ local function getPlaceIdFromUrl(url)
 end
 
 local ScriptLinks = {
+-- Slime RNG
     {
         GameUrl = "https://www.roblox.com/games/92416421522960/Slime-RNG",
         Code = [[
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdSlimeRNG/init"))()
         ]]
     },
-
+-- Ps99
     {
         GameUrl = "https://www.roblox.com/games/8737899170/Pet-Simulator-99",
         Code = [[
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdPs99StairwayOfHeaven/init"))()
         ]]
     },
-
+-- Survive Zombie Arena
     {
         GameUrl = "https://www.roblox.com/games/114204398207377/Survive-Zombie-Arena",
         Code = [[
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdSurviveZombieArena/init"))()
         ]]
     },
-
+-- Survive Zombie Arena ingame Arena 
     {
         GameUrl = "https://www.roblox.com/games/98927955463992/Arena",
         Code = [[
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdSurviveZombieArena/init"))()
         ]]
     },
-
+-- Build a Rig Farm
      {
         GameUrl = "https://www.roblox.com/games/107646426076756/Build-A-Ring-Farm",
         Code = [[
             loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdBuildARigFarm/init"))()
+        ]]
+    },
+-- Gag2
+    {
+        GameUrl = "https://www.roblox.com/games/97598239454123/Grow-a-Garden-2",
+        Code = [[
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdGrowAGarden2/init"))()
+        ]]
+    },
+-- Animal Hospital
+    {
+        GameUrl = "https://www.roblox.com/games/78515283254292/Animal-Hospital",
+        Code = [[
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdAnimalHospital/init"))()
+        ]]
+    },
+-- Animal Hospital Ingame
+    {
+        GameUrl = "https://www.roblox.com/games/78515283254292/Animal-Hospital",
+        Code = [[
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/subscript/loader/n0bdAnimalHospital/init"))()
         ]]
     },
 }
