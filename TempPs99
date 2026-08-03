@@ -1,0 +1,298 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/N0BD/n0bd/refs/heads/n0bd.hub/n0bd.gui%20new"))()
+
+local ALLOWED_PLACEID = 8737899170
+
+if game.PlaceId ~= ALLOWED_PLACEID then
+    local msg = ("Wrong PlaceId! Allowed: %d | Current: %d"):format(ALLOWED_PLACEID, game.PlaceId)
+    local ok = false
+    pcall(function()
+        ok = (getgenv().N0BD_Toast and getgenv().N0BD_Toast(msg, 3.2)) or false
+    end)
+    if not ok then
+        pcall(function()
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "N0BD.HUB",
+                Text = msg,
+                Duration = 8,
+            })
+        end)
+    end
+    return
+end
+
+local N0BD
+local function waitForUI(timeout)
+    local t0 = tick()
+    while tick() - t0 < (timeout or 10) do
+        local ui = getgenv().N0BD_UI
+        if ui and ui.AddTab and ui.AddToggle and ui.AddLabel then
+            return ui
+        end
+        task.wait(0.1)
+    end
+    return nil
+end
+
+N0BD = waitForUI(10)
+if not N0BD then
+    warn("N0BD_UI API not available – Stairway cannot load")
+    return
+end
+
+local function hasFileSupport()
+    return type(writefile) == "function" and type(readfile) == "function" and type(makefolder) == "function"
+end
+
+local function saveState(state)
+    if not hasFileSupport() then
+        getgenv().Stairway_Enabled = state
+        return
+    end
+    local success, err = pcall(function()
+        makefolder("n0bd.hub")
+        writefile("n0bd.hub/Ps99", state and "true" or "false")
+    end)
+    if not success then
+        warn("Failed to write state to n0bd.hub/Ps99:", err)
+        getgenv().Stairway_Enabled = state
+    end
+end
+
+local function loadState()
+    if not hasFileSupport() then
+        return getgenv().Stairway_Enabled == true
+    end
+    local success, data = pcall(function()
+        return readfile("n0bd.hub/Ps99")
+    end)
+    if success and data then
+        local trimmed = data:gsub("%s+", "")
+        if trimmed == "true" then
+            return true
+        elseif trimmed == "false" then
+            return false
+        end
+    end
+    return getgenv().Stairway_Enabled == true
+end
+
+local function saveAntiAFK(state)
+    if not hasFileSupport() then
+        getgenv().AntiAFK_Enabled = state
+        return
+    end
+    local success, err = pcall(function()
+        makefolder("n0bd.hub")
+        writefile("n0bd.hub/AntiAFK", state and "true" or "false")
+    end)
+    if not success then
+        warn("Failed to write AntiAFK state:", err)
+        getgenv().AntiAFK_Enabled = state
+    end
+end
+
+local function loadAntiAFK()
+    if not hasFileSupport() then
+        return getgenv().AntiAFK_Enabled == true
+    end
+    local success, data = pcall(function()
+        return readfile("n0bd.hub/AntiAFK")
+    end)
+    if success and data then
+        local trimmed = data:gsub("%s+", "")
+        if trimmed == "true" then
+            return true
+        elseif trimmed == "false" then
+            return false
+        end
+    end
+    return getgenv().AntiAFK_Enabled == true
+end
+
+local TAB_NAME  = "Stairway"
+local TOGGLE_ID = "StairwayToggle"
+local LABEL_ID  = "StairwayStatus"
+
+local Ctrl = getgenv().Stairway_CTRL or { cancel = 0, running = false }
+getgenv().Stairway_CTRL = Ctrl
+
+local enabled = loadState()
+local currentMaid = nil
+
+local function NewMaid()
+    local self = { _tasks = {} }
+    function self:Give(task)
+        if task == nil then return end
+        table.insert(self._tasks, task)
+        return task
+    end
+    function self:Cleanup()
+        for i = #self._tasks, 1, -1 do
+            local t = self._tasks[i]
+            self._tasks[i] = nil
+            if type(t) == "function" then
+                pcall(t)
+            elseif typeof(t) == "RBXScriptConnection" then
+                pcall(function() t:Disconnect() end)
+            elseif typeof(t) == "Instance" then
+                pcall(function() t:Destroy() end)
+            elseif typeof(t) == "thread" then
+                pcall(function() task.cancel(t) end)
+            end
+        end
+    end
+    return self
+end
+
+local function disableStairway()
+    Ctrl.cancel += 1
+    Ctrl.running = false
+    _G.s = false
+    pcall(function() getgenv().Stairway = false end)
+
+    if currentMaid then
+        currentMaid:Cleanup()
+        currentMaid = nil
+    end
+    enabled = false
+    saveState(false)
+end
+
+local function enableStairway()
+    if Ctrl.running then
+        enabled = true
+        saveState(true)
+        return
+    end
+
+    disableStairway()
+
+    currentMaid = NewMaid()
+    Ctrl.running = true
+    Ctrl.cancel += 1
+    local myCancel = Ctrl.cancel
+
+    enabled = true
+    saveState(true)
+
+    currentMaid:Give(function()
+        Ctrl.running = false
+        _G.s = false
+        pcall(function() getgenv().Stairway = false end)
+    end)
+
+    N0BD.Toast("Made by Mikey, this is only a beta", 10)
+    print("Made by Mikey, this is only a beta")
+
+    local function alive()
+        return Ctrl.running and myCancel == Ctrl.cancel and enabled
+    end
+
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local lp = Players.LocalPlayer
+
+    local coordinates = 0
+    local hbConn = RunService.Heartbeat:Connect(function()
+        if not alive() then return end
+        local ch = lp.Character
+        local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
+        if hrp then coordinates = hrp.Position.Y end
+    end)
+    currentMaid:Give(hbConn)
+
+    local th = task.spawn(function()
+        local ch = lp.Character or lp.CharacterAdded:Wait()
+        local hrp = ch:WaitForChild("HumanoidRootPart", 10)
+        if not hrp then return end
+
+        if not alive() then return end
+        hrp.CFrame = CFrame.new(120.79306030273438, -126.99183654785156, -213.44664001464844)
+
+        for _ = 1, 50 do
+            if not alive() then return end
+            task.wait(0.1)
+        end
+
+        if not alive() then return end
+        ch = lp.Character or lp.CharacterAdded:Wait()
+        hrp = ch:WaitForChild("HumanoidRootPart", 10)
+        if not hrp then return end
+        hrp.CFrame = CFrame.new(630.6519165039062, 143.7024383544922, -1891.4598388671875)
+
+        for _ = 1, 10 do
+            if not alive() then return end
+            task.wait(0.1)
+        end
+
+        _G.s = true
+
+        while alive() and _G.s do
+            local ch2 = lp.Character
+            local hrp2 = ch2 and ch2:FindFirstChild("HumanoidRootPart")
+            if hrp2 then
+                local p = hrp2.Position
+                hrp2.CFrame = CFrame.new(p.X, p.Y + 36, p.Z)
+            end
+            task.wait(0.3)
+
+            if ch2 then
+                local hum = ch2:FindFirstChildOfClass("Humanoid")
+                if hum and hum.Health <= 0 then
+                    N0BD.Toast("Stairway wurde aufgrund deines Todes beendet", 5)
+                    disableStairway()
+                    local statusLabel = N0BD.GetLabel(LABEL_ID)
+                    if statusLabel then
+                        statusLabel.SetValue("DISABLED")
+                    end
+                    return
+                end
+            end
+        end
+    end)
+    currentMaid:Give(th)
+end
+
+local page = N0BD.AddTab(TAB_NAME, "🚀")
+
+local statusLabel = N0BD.AddLabel(page, "Status", enabled and "ENABLED" or "DISABLED", LABEL_ID)
+
+local toggle = N0BD.AddToggle(
+    page,
+    "Enable / Disable",
+    "Enable or Disable Automatic Stairway.",
+    enabled,
+    function(state)
+        if state then
+            enableStairway()
+        else
+            disableStairway()
+        end
+        statusLabel.SetValue(state and "ENABLED" or "DISABLED")
+    end,
+    TOGGLE_ID
+)
+
+if enabled then
+    toggle.SetSilent(true)
+    enableStairway()
+else
+    disableStairway()
+    statusLabel.SetValue("DISABLED")
+end
+
+local antiAFKState = loadAntiAFK()
+local antiAFKToggle = N0BD.GetToggle("AntiAFK")
+if antiAFKToggle then
+    if antiAFKState then
+        antiAFKToggle.SetSilent(true)
+        if antiAFKToggle.Enable then antiAFKToggle.Enable() end
+    else
+        antiAFKToggle.SetSilent(false)
+        if antiAFKToggle.Disable then antiAFKToggle.Disable() end
+    end
+else
+    warn("AntiAFK toggle not found in main tab")
+end
+
+N0BD.SelectTab(TAB_NAME)
