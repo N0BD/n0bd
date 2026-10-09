@@ -43,9 +43,6 @@ end
 local function runUi(playerGui)
     local player = Players.LocalPlayer
 
-    -- ═══════════════════════════════════════════════════════════════════
-    --  KONSTANTEN & MACOS SEQUOIA THEME
-    -- ═══════════════════════════════════════════════════════════════════
 
     local WINDOW_SIZE       = Vector2.new(880, 580)
     local MINI_SIZE         = Vector2.new(210, 44)
@@ -87,9 +84,6 @@ local function runUi(playerGui)
     local old = playerGui:FindFirstChild("n0bd.hub")
     if old then old:Destroy() end
 
-    -- ═══════════════════════════════════════════════════════════════════
-    --  UTILITY
-    -- ═══════════════════════════════════════════════════════════════════
 
     local function getViewport()
         local cam = workspace.CurrentCamera
@@ -306,9 +300,6 @@ local function runUi(playerGui)
         end)
     end
 
-    -- ═══════════════════════════════════════════════════════════════════
-    --  SCREEN GUI
-    -- ═══════════════════════════════════════════════════════════════════
 
     local gui = Instance.new("ScreenGui")
     gui.Name           = "n0bd.hub"
@@ -318,7 +309,7 @@ local function runUi(playerGui)
     gui.DisplayOrder   = 9999
     gui.Parent         = playerGui
 
-    -- ── TOAST (macOS Notification Banner) ──────────────────────────
+    -- ── TOAST ──────────────────────────
     local toastFrame, toastTask
 
     local function showToast(message)
@@ -436,7 +427,7 @@ local function runUi(playerGui)
         glow.Size     = main.Size
     end))
 
-    -- ── TOPBAR (macOS Titlebar) ────────────────────────────────────
+    -- ── TOPBAR ────────────────────────────────────
     local topbar = Instance.new("Frame")
     topbar.Name             = "Topbar"
     topbar.Size             = UDim2.new(1, 0, 0, TOP_H)
@@ -536,7 +527,7 @@ local function runUi(playerGui)
     controls.BackgroundTransparency = 1
     controls.Parent = topbar
 
-    -- ── MINIMIERTER MODUS (OPEN GUI TEXT RESTORE) ───────────────────
+
     local miniFrame = Instance.new("Frame")
     miniFrame.Name = "MiniFrame"
     miniFrame.Size = offset(MINI_SIZE.X, MINI_SIZE.Y)
@@ -866,9 +857,6 @@ local function runUi(playerGui)
         if selectedTab == name then selectTab("Main") end
     end
 
-    -- ═══════════════════════════════════════════════════════════════════
-    --  KOMPONENTEN
-    -- ═══════════════════════════════════════════════════════════════════
 
     local function createHeader(page, text, options)
         local opts = readOptions(options, text)
@@ -1583,9 +1571,6 @@ local function runUi(playerGui)
         return input
     end
 
-    -- ═══════════════════════════════════════════════════════════════════
-    --  BUILT-IN TABS
-    -- ═══════════════════════════════════════════════════════════════════
 
     local mainPage = createTab("Main", CONFIG.TAB_ICON_MAIN)
 
@@ -1665,9 +1650,6 @@ local function runUi(playerGui)
         )
     end
 
-    -- ═══════════════════════════════════════════════════════════════════
-    --  MINIMIZE / RESTORE / CLOSE
-    -- ═══════════════════════════════════════════════════════════════════
 
     local minimized = false
     local busy      = false
@@ -1815,7 +1797,7 @@ local function runUi(playerGui)
     selectTab("Main")
 
     -- ═══════════════════════════════════════════════════════════════════
-    --  GLOBAL API (1ZU1 IDENTISCH)
+    --  GLOBAL API
     -- ═══════════════════════════════════════════════════════════════════
 
     getgenv().N0BD_UI = {
@@ -1907,9 +1889,7 @@ local function runUi(playerGui)
     getgenv().N0BD_Toast = showToast
 end
 
--- ═══════════════════════════════════════════════════════════════════════
 --  LAUNCH
--- ═══════════════════════════════════════════════════════════════════════
 
 task.defer(function()
     waitForCamera()
