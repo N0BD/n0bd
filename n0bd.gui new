@@ -1,23 +1,11 @@
 local CONFIG = {
-    -- Icons für die Topbar-Buttons
-    ICON_DISCORD    = "",        -- z.B. "rbxassetid://1234567890"
-    ICON_MINIMIZE   = "",        -- z.B. "rbxassetid://1234567890"
-    ICON_CLOSE      = "",        -- z.B. "rbxassetid://1234567890"
-    ICON_RESTORE    = "",        -- z.B. "rbxassetid://1234567890"
-    
-    -- Fallback-Symbole (werden verwendet, wenn keine Asset ID angegeben ist)
+    ICON_DISCORD      = "",
     FALLBACK_DISCORD  = "Discord",
-    FALLBACK_MINIMIZE = "–",
-    FALLBACK_CLOSE    = "❌",
-    FALLBACK_RESTORE  = "▶",
-    
-    -- Icons für Tabs (können auch Emojis oder Text sein)
-    TAB_ICON_MAIN   = "⚙",
+    FALLBACK_MINIMIZE = "-",
+    FALLBACK_CLOSE    = "X",
+    FALLBACK_RESTORE  = ">",
+    TAB_ICON_MAIN     = "⚙",
 }
-
--- ═══════════════════════════════════════════════════════════════════════
---  IMPORTS & SAFETY
--- ═══════════════════════════════════════════════════════════════════════
 
 local Players          = game:GetService("Players")
 local RunService       = game:GetService("RunService")
@@ -37,7 +25,7 @@ local function waitForPlayerGui()
         Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
         player = Players.LocalPlayer
     end
-    if not player then warn("N0BD.HUB: LocalPlayer not found") return nil end
+    if not player then warn("n0bd.hub: LocalPlayer not found") return nil end
     return player:WaitForChild("PlayerGui", 30)
 end
 
@@ -56,51 +44,47 @@ local function runUi(playerGui)
     local player = Players.LocalPlayer
 
     -- ═══════════════════════════════════════════════════════════════════
-    --  KONSTANTEN 
+    --  KONSTANTEN & MACOS SEQUOIA THEME
     -- ═══════════════════════════════════════════════════════════════════
 
     local WINDOW_SIZE       = Vector2.new(880, 580)
-    local MINI_SIZE         = Vector2.new(240, 48)
-    local TOP_H             = 56
-    local RADIUS            = 18
+    local MINI_SIZE         = Vector2.new(210, 44)
+    local TOP_H             = 42
+    local RADIUS            = 12
     local SIDEBAR_W         = 180
-    local GAP               = 18
-    local MARGIN            = 18
-    local CARD_PADDING      = 16
-    local CARD_RADIUS       = 12
-    local BTN_RADIUS        = 10
-    local BTN_H             = 34
+    local GAP               = 14
+    local MARGIN            = 14
+    local CARD_PADDING      = 14
+    local CARD_RADIUS       = 8
+    local BTN_RADIUS        = 6
+    local BTN_H             = 32
     local DISCORD_URL       = "https://discord.gg/n0bd"
     local TOGGLE_KEY        = Enum.KeyCode.RightShift
     local ANTI_AFK_INTERVAL = 300
 
-    -- ═══════════════════════════════════════════════════════════════════
-    --  FARBSCHEMA: "Deep Amethyst"
-    -- ═══════════════════════════════════════════════════════════════════
-
     local Theme = {
-        BG         = Color3.fromRGB(12, 10, 24),
-        Top        = Color3.fromRGB(20, 16, 40),
-        Panel      = Color3.fromRGB(16, 14, 32),
-        Card       = Color3.fromRGB(28, 24, 56),
-        CardHover  = Color3.fromRGB(50, 40, 100),
-        CardActive = Color3.fromRGB(60, 48, 130),
-        Stroke     = Color3.fromRGB(130, 100, 220),
-        Text       = Color3.fromRGB(240, 240, 255),
-        SubText    = Color3.fromRGB(180, 170, 220),
-        Accent     = Color3.fromRGB(160, 120, 255),
-        Accent2    = Color3.fromRGB(200, 160, 255),
-        Danger     = Color3.fromRGB(255, 80, 120),
-        Muted      = Color3.fromRGB(24, 20, 48),
-        Success    = Color3.fromRGB(80, 240, 180),
-        ToggleOn   = Color3.fromRGB(140, 100, 240),
-        ToggleOff  = Color3.fromRGB(36, 30, 68),
-        InputBg    = Color3.fromRGB(16, 14, 34),
-        Overlay    = Color3.fromRGB(0, 0, 0),
-        Glass      = Color3.fromRGB(40, 34, 76),
+        BG         = Color3.fromRGB(22, 22, 28),
+        Top        = Color3.fromRGB(18, 18, 22),
+        Panel      = Color3.fromRGB(28, 28, 36),
+        Card       = Color3.fromRGB(36, 36, 46),
+        CardHover  = Color3.fromRGB(48, 48, 62),
+        CardActive = Color3.fromRGB(60, 52, 85),
+        Stroke     = Color3.fromRGB(65, 65, 82),
+        Text       = Color3.fromRGB(240, 242, 250),
+        SubText    = Color3.fromRGB(150, 155, 175),
+        Accent     = Color3.fromRGB(150, 100, 255),
+        Accent2    = Color3.fromRGB(180, 140, 255),
+        Danger     = Color3.fromRGB(255, 95, 87),
+        Muted      = Color3.fromRGB(28, 26, 42),
+        Success    = Color3.fromRGB(40, 200, 64),
+        ToggleOn   = Color3.fromRGB(150, 100, 255),
+        ToggleOff  = Color3.fromRGB(50, 50, 62),
+        InputBg    = Color3.fromRGB(24, 24, 30),
+        Overlay    = Color3.fromRGB(12, 12, 16),
+        Glass      = Color3.fromRGB(28, 28, 36),
     }
 
-    local old = playerGui:FindFirstChild("N0BD.HUB")
+    local old = playerGui:FindFirstChild("n0bd.hub")
     if old then old:Destroy() end
 
     -- ═══════════════════════════════════════════════════════════════════
@@ -118,8 +102,7 @@ local function runUi(playerGui)
 
     local function safeNumber(value, fallback)
         value = tonumber(value)
-        if not value or value ~= value
-            or value == math.huge or value == -math.huge then
+        if not value or value ~= value or value == math.huge or value == -math.huge then
             return fallback or 0
         end
         local vp    = getViewport()
@@ -140,7 +123,7 @@ local function runUi(playerGui)
     end
 
     local function tween(instance, seconds, props, easingStyle, easingDirection)
-        easingStyle = easingStyle or Enum.EasingStyle.Quint
+        easingStyle = easingStyle or Enum.EasingStyle.Quart
         easingDirection = easingDirection or Enum.EasingDirection.Out
         if props.Size     then props.Size     = safeUdim2(props.Size)     end
         if props.Position then props.Position = safeUdim2(props.Position) end
@@ -154,12 +137,9 @@ local function runUi(playerGui)
     end
 
     local function corner(inst, px)
-        local c = inst:FindFirstChildOfClass("UICorner")
-        if not c then
-            c = Instance.new("UICorner")
-            c.Parent = inst
-        end
+        local c = inst:FindFirstChildOfClass("UICorner") or Instance.new("UICorner")
         c.CornerRadius = UDim.new(0, px or CARD_RADIUS)
+        c.Parent = inst
         return c
     end
 
@@ -292,115 +272,38 @@ local function runUi(playerGui)
         return Theme.Card
     end
 
-    -- ── RIPPLE ──────────────────────────────────────────────────────
+    -- ── RIPPLE EFFECT ──────────────────────────────────────────────
     local function spawnRipple(button, mouseX, mouseY)
+        button.ClipsDescendants = true
         local absPos = button.AbsolutePosition
-        local size = button.AbsoluteSize
+        local absSize = button.AbsoluteSize
+        
         local relX = mouseX - absPos.X
         local relY = mouseY - absPos.Y
-        local maxDim = math.max(size.X, size.Y)
-        local radius = maxDim * 0.6
+        local maxDim = math.max(absSize.X, absSize.Y) * 1.5
 
         local ripple = Instance.new("Frame")
-        ripple.Size = offset(0, 0)
-        ripple.Position = offset(relX - 0, relY - 0)
+        ripple.Name = "RippleEffect"
         ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+        ripple.Position = UDim2.fromOffset(relX, relY)
+        ripple.Size = UDim2.fromOffset(0, 0)
         ripple.BackgroundColor3 = Theme.Text
-        ripple.BackgroundTransparency = 0.8
+        ripple.BackgroundTransparency = 0.65
         ripple.BorderSizePixel = 0
-        ripple.ZIndex = 999
+        ripple.ZIndex = 99
         ripple.Parent = button
         corner(ripple, 999)
 
-        local scale = Instance.new("UIScale")
-        scale.Scale = 0.1
-        scale.Parent = ripple
-
-        tween(ripple, 0.4, { Size = offset(radius * 2, radius * 2), BackgroundTransparency = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        tween(scale, 0.4, { Scale = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-        task.delay(0.5, function() ripple:Destroy() end)
-    end
-
-    -- ── FLOATING PARTICLES ──────────────────────────────────────────
-    local particleContainer
-    local function spawnParticles()
-        if particleContainer then return end
-        particleContainer = Instance.new("Frame")
-        particleContainer.Name = "Particles"
-        particleContainer.Size = UDim2.new(1, 0, 1, 0)
-        particleContainer.BackgroundTransparency = 1
-        particleContainer.Parent = main
-        particleContainer.ZIndex = 0
-
-        for i = 1, 15 do
-            local dot = Instance.new("Frame")
-            local size = math.random(2, 4)
-            dot.Size = offset(size, size)
-            dot.BackgroundColor3 = Theme.Accent
-            dot.BackgroundTransparency = 0.5 + math.random() * 0.4
-            dot.BorderSizePixel = 0
-            dot.Parent = particleContainer
-            corner(dot, 999)
-
-            local x = math.random() * 100
-            local y = math.random() * 100
-            dot.Position = UDim2.new(x / 100, 0, y / 100, 0)
-
-            local duration = math.random(12, 20)
-            local dx = (math.random() - 0.5) * 60
-            local dy = (math.random() - 0.5) * 60
-
-            task.spawn(function()
-                while dot and dot.Parent do
-                    local targetX = math.clamp(x + dx, 0, 100)
-                    local targetY = math.clamp(y + dy, 0, 100)
-                    TweenService:Create(dot, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
-                        Position = UDim2.new(targetX / 100, 0, targetY / 100, 0)
-                    }):Play()
-                    task.wait(duration)
-                    x = targetX; y = targetY
-                    dx = (math.random() - 0.5) * 60
-                    dy = (math.random() - 0.5) * 60
-                end
-            end)
-        end
-    end
-
-    -- ── CARD BREATHING ──────────────────────────────────────────────
-    local function addBreathing(card)
-        TweenService:Create(card, TweenInfo.new(2.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-            BackgroundTransparency = 0.02
-        }):Play()
-    end
-
-    -- ── ICON HELPER (unterstützt Asset IDs + Fallback) ──────────────
-    local function createIcon(assetId, fallbackText, color, size)
-        local container = Instance.new("Frame")
-        container.Size = offset(size or 20, size or 20)
-        container.BackgroundTransparency = 1
-        container.BorderSizePixel = 0
-
-        if assetId and assetId ~= "" then
-            local image = Instance.new("ImageLabel")
-            image.Size = UDim2.new(1, 0, 1, 0)
-            image.BackgroundTransparency = 1
-            image.Image = assetId
-            image.ImageColor3 = color or Theme.Text
-            image.Parent = container
-            return container
-        else
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(1, 0, 1, 0)
-            label.BackgroundTransparency = 1
-            label.Font = Enum.Font.GothamBold
-            label.TextSize = size or 20
-            label.TextColor3 = color or Theme.Text
-            label.TextXAlignment = Enum.TextXAlignment.Center
-            label.TextYAlignment = Enum.TextYAlignment.Center
-            label.Text = fallbackText or "?"
-            label.Parent = container
-            return container
-        end
+        local tweenInfo = TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+        local tw = TweenService:Create(ripple, tweenInfo, {
+            Size = UDim2.fromOffset(maxDim, maxDim),
+            BackgroundTransparency = 1
+        })
+        
+        tw:Play()
+        tw.Completed:Connect(function()
+            ripple:Destroy()
+        end)
     end
 
     -- ═══════════════════════════════════════════════════════════════════
@@ -408,14 +311,14 @@ local function runUi(playerGui)
     -- ═══════════════════════════════════════════════════════════════════
 
     local gui = Instance.new("ScreenGui")
-    gui.Name           = "N0BD.HUB"
+    gui.Name           = "n0bd.hub"
     gui.ResetOnSpawn   = false
     gui.IgnoreGuiInset = true
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.DisplayOrder   = 9999
     gui.Parent         = playerGui
 
-    -- ── TOAST ──────────────────────────────────────────────────────
+    -- ── TOAST (macOS Notification Banner) ──────────────────────────
     local toastFrame, toastTask
 
     local function showToast(message)
@@ -423,7 +326,7 @@ local function runUi(playerGui)
         if toastTask  then task.cancel(toastTask);  toastTask  = nil end
         if toastFrame then toastFrame:Destroy();     toastFrame = nil end
 
-        local font     = Enum.Font.GothamSemibold
+        local font     = Enum.Font.GothamMedium
         local textSize = 13
         local tw       = TextService:GetTextSize(message, textSize, font, Vector2.new(9999, 40)).X
         local width    = math.clamp(math.floor(tw + 56), 200, 460)
@@ -432,33 +335,24 @@ local function runUi(playerGui)
         toastFrame.Name                   = "Toast"
         toastFrame.AnchorPoint            = Vector2.new(0.5, 0)
         toastFrame.Position               = UDim2.new(0.5, 0, 0, -60)
-        toastFrame.Size                   = offset(width, 46)
+        toastFrame.Size                   = offset(width, 42)
         toastFrame.BackgroundColor3       = Theme.Panel
         toastFrame.BackgroundTransparency = 0.05
         toastFrame.BorderSizePixel        = 0
         toastFrame.ZIndex                 = 100
         toastFrame.Parent                 = gui
-        corner(toastFrame, 14)
-        stroke(toastFrame, Theme.Accent, 0.40, 2)
-
-        local glassBg = Instance.new("Frame")
-        glassBg.Size = UDim2.new(1, 0, 1, 0)
-        glassBg.BackgroundColor3 = Theme.Card
-        glassBg.BackgroundTransparency = 0.7
-        glassBg.BorderSizePixel = 0
-        glassBg.ZIndex = -1
-        glassBg.Parent = toastFrame
-        corner(glassBg, 14)
+        corner(toastFrame, 10)
+        stroke(toastFrame, Theme.Stroke, 0.40, 1)
 
         local icon = Instance.new("TextLabel")
         icon.Size = UDim2.new(0, 36, 1, 0)
         icon.BackgroundTransparency = 1
         icon.Font = Enum.Font.GothamBold
-        icon.TextSize = 18
+        icon.TextSize = 14
         icon.TextColor3 = Theme.Accent
         icon.TextXAlignment = Enum.TextXAlignment.Center
         icon.TextYAlignment = Enum.TextYAlignment.Center
-        icon.Text = "👑"
+        icon.Text = "★"
         icon.Parent = toastFrame
 
         local label = Instance.new("TextLabel")
@@ -476,10 +370,10 @@ local function runUi(playerGui)
 
         toastFrame.Position = UDim2.new(0.5, 0, 0, -60)
         toastFrame.BackgroundTransparency = 1
-        tween(toastFrame, 0.4, {
+        tween(toastFrame, 0.35, {
             Position = UDim2.new(0.5, 0, 0, 16),
             BackgroundTransparency = 0.05
-        }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+        }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
         toastTask = task.delay(2.8, function()
             if toastFrame then
@@ -500,12 +394,16 @@ local function runUi(playerGui)
     main.Size             = offset(WINDOW_SIZE.X, WINDOW_SIZE.Y)
     main.BackgroundColor3 = Theme.BG
     main.BorderSizePixel  = 0
-    main.ClipsDescendants = true
+    main.ClipsDescendants = false
     main.Active           = true
     main.ZIndex           = 2
     main.Parent           = gui
     local mainCorner = corner(main, RADIUS)
-    stroke(main, Theme.Stroke, 0.65, 1.5)
+    stroke(main, Theme.Stroke, 0.50, 1)
+
+    local uiScale = Instance.new("UIScale")
+    uiScale.Scale = 1
+    uiScale.Parent = main
 
     do
         local vp = getViewport()
@@ -515,37 +413,7 @@ local function runUi(playerGui)
         )
     end
 
-    -- ── ANIMATED BACKGROUND ──────────────────────────────────────
-    local bgAnim = Instance.new("Frame")
-    bgAnim.Name = "BackgroundAnim"
-    bgAnim.Size = UDim2.new(1, 0, 1, 0)
-    bgAnim.BackgroundColor3 = Theme.BG
-    bgAnim.BackgroundTransparency = 0.0
-    bgAnim.BorderSizePixel = 0
-    bgAnim.ZIndex = 0
-    bgAnim.Parent = main
-
-    local function animateBackground()
-        if not main or not main.Parent then return end
-        local colors = {
-            Theme.BG,
-            Color3.fromRGB(14, 12, 28),
-            Color3.fromRGB(10, 8, 22),
-        }
-        local idx = 1
-        while main and main.Parent do
-            local nextColor = colors[idx % #colors + 1]
-            TweenService:Create(bgAnim, TweenInfo.new(8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { BackgroundColor3 = nextColor }):Play()
-            task.wait(8)
-            idx = idx + 1
-        end
-    end
-    task.spawn(animateBackground)
-
-    -- ── PARTICLES ──────────────────────────────────────────────────
-    task.defer(spawnParticles)
-
-    -- ── GLOW ──────────────────────────────────────────────────────
+    -- ── GLOW / SHADOW ──────────────────────────────────────────────
     local glow = Instance.new("Frame")
     glow.Name                   = "Glow"
     glow.BackgroundTransparency = 1
@@ -553,19 +421,11 @@ local function runUi(playerGui)
     glow.ZIndex                 = 1
     glow.Parent                 = gui
     local glowCorner = corner(glow, RADIUS)
-
-    local glowStroke = stroke(glow, Theme.Accent, 0.88, 6)
-    TweenService:Create(glowStroke, TweenInfo.new(2.0, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-        Transparency = 0.85
-    }):Play()
+    stroke(glow, Theme.Stroke, 0.85, 4)
 
     local glowScale = Instance.new("UIScale")
     glowScale.Scale = 1.0
     glowScale.Parent = glow
-
-    local uiScale = Instance.new("UIScale")
-    uiScale.Scale = 1
-    uiScale.Parent = main
 
     trackConn(uiScale:GetPropertyChangedSignal("Scale"):Connect(function()
         glowScale.Scale = uiScale.Scale
@@ -576,7 +436,7 @@ local function runUi(playerGui)
         glow.Size     = main.Size
     end))
 
-    -- ── TOPBAR ─────────────────────────────────────────────────────
+    -- ── TOPBAR (macOS Titlebar) ────────────────────────────────────
     local topbar = Instance.new("Frame")
     topbar.Name             = "Topbar"
     topbar.Size             = UDim2.new(1, 0, 0, TOP_H)
@@ -587,61 +447,64 @@ local function runUi(playerGui)
     topbar.Parent           = main
     local topbarCorner = corner(topbar, RADIUS)
 
-    local glowLine = Instance.new("Frame")
-    glowLine.Position               = UDim2.new(0, 14, 1, -3)
-    glowLine.Size                   = UDim2.new(1, -28, 0, 2)
-    glowLine.BackgroundColor3       = Theme.Accent
-    glowLine.BackgroundTransparency = 0.30
-    glowLine.BorderSizePixel        = 0
-    glowLine.Parent                 = topbar
-    corner(glowLine, 8)
+    local trafficLights = Instance.new("Frame")
+    trafficLights.Name = "TrafficLights"
+    trafficLights.Size = UDim2.fromOffset(60, 20)
+    trafficLights.Position = UDim2.fromOffset(12, 11)
+    trafficLights.BackgroundTransparency = 1
+    trafficLights.Parent = topbar
 
-    TweenService:Create(glowLine, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-        BackgroundTransparency = 0.15
-    }):Play()
-
-    -- ── TOPBAR BUTTONS ──────────────────────────────────────────────
-    local function makeTopbarButton(iconAssetId, fallbackText, color, width, iconSize)
-        local btn = Instance.new("TextButton")
-        btn.AutoButtonColor = false
-        btn.BackgroundColor3 = Theme.Card
-        btn.BorderSizePixel  = 0
-        btn.Size             = offset(width or 44, BTN_H)
-        btn.Text = ""
-        setButtonBaseColor(btn, Theme.Card)
-        corner(btn, BTN_RADIUS)
-        stroke(btn, Theme.Stroke, 0.75, 1.2)
-
-        local icon = createIcon(iconAssetId, fallbackText, color or Theme.Text, iconSize or 18)
-        icon.Size = UDim2.new(1, 0, 1, 0)
-        icon.Parent = btn
-
-        trackConn(btn.MouseEnter:Connect(function()
-            tween(btn, 0.10, { BackgroundColor3 = Theme.CardHover }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(btn.MouseLeave:Connect(function()
-            tween(btn, 0.10, { BackgroundColor3 = getButtonBaseColor(btn) }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(btn.MouseButton1Click:Connect(function()
-            local mousePos = UserInputService:GetMouseLocation()
-            spawnRipple(btn, mousePos.X, mousePos.Y)
-        end))
-
-        return btn
+    local function makeLight(col, posX)
+        local light = Instance.new("Frame")
+        light.Size = UDim2.fromOffset(12, 12)
+        light.Position = UDim2.fromOffset(posX, 4)
+        light.BackgroundColor3 = col
+        light.BorderSizePixel = 0
+        light.Parent = trafficLights
+        corner(light, 999)
+        return light
     end
 
-    local topBtnY = math.floor((TOP_H - BTN_H) * 0.5)
+    local closeLight = makeLight(Theme.Danger, 0)
+    local minLight   = makeLight(Color3.fromRGB(254, 188, 46), 18)
+    makeLight(Theme.Success, 36)
 
-    -- Discord Button
-    local discordBtn = makeTopbarButton(
-        CONFIG.ICON_DISCORD,
-        CONFIG.FALLBACK_DISCORD,
-        Theme.Accent,
-        100,
-        18
-    )
-    discordBtn.Position = offset(12, topBtnY)
-    discordBtn.Parent   = topbar
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Size = UDim2.fromScale(1, 1)
+    closeBtn.BackgroundTransparency = 1
+    closeBtn.Text = ""
+    closeBtn.Parent = closeLight
+
+    local minimizeBtn = Instance.new("TextButton")
+    minimizeBtn.Size = UDim2.fromScale(1, 1)
+    minimizeBtn.BackgroundTransparency = 1
+    minimizeBtn.Text = ""
+    minimizeBtn.Parent = minLight
+
+    register("Buttons", "Close", {
+        Button = closeBtn,
+        Click  = function(cb) return trackConn(closeBtn.MouseButton1Click:Connect(cb)) end,
+    })
+    register("Buttons", "Minimize", {
+        Button = minimizeBtn,
+        Click  = function(cb) return trackConn(minimizeBtn.MouseButton1Click:Connect(cb)) end,
+    })
+
+    local discordBtn = Instance.new("TextButton")
+    discordBtn.AutoButtonColor = false
+    discordBtn.BackgroundColor3 = Theme.Card
+    discordBtn.BorderSizePixel = 0
+    discordBtn.Position = UDim2.new(1, -110, 0, 7)
+    discordBtn.Size = offset(98, 28)
+    discordBtn.Text = "Discord"
+    discordBtn.Font = Enum.Font.GothamBold
+    discordBtn.TextSize = 12
+    discordBtn.TextColor3 = Theme.Accent
+    discordBtn.Parent = topbar
+    setButtonBaseColor(discordBtn, Theme.Card)
+    corner(discordBtn, BTN_RADIUS)
+    stroke(discordBtn, Theme.Stroke, 0.70, 1)
+
     register("Buttons", "Discord", {
         Button = discordBtn,
         Click  = function(cb) return trackConn(discordBtn.MouseButton1Click:Connect(cb)) end,
@@ -653,127 +516,88 @@ local function runUi(playerGui)
         showToast(ok and "Discord link copied!" or "Clipboard not available")
     end))
 
-    -- Titel
     local title = Instance.new("TextLabel")
     title.Name                   = "Title"
     title.BackgroundTransparency = 1
     title.AnchorPoint            = Vector2.new(0.5, 0.5)
     title.Position               = UDim2.new(0.5, 0, 0.5, 0)
     title.Size                   = UDim2.new(0, 280, 1, 0)
-    title.Font                   = Enum.Font.GothamBlack
-    title.TextSize               = 20
-    title.TextColor3             = Theme.Text
+    title.Font                   = Enum.Font.GothamBold
+    title.TextSize               = 15
+    title.TextColor3             = Theme.SubText
     title.TextXAlignment         = Enum.TextXAlignment.Center
     title.TextYAlignment         = Enum.TextYAlignment.Center
-    title.Text                   = "N0BD.HUB"
+    title.Text                   = "n0bd.hub"
     title.Parent                 = topbar
 
-    -- Controls
     local controls = Instance.new("Frame")
-    controls.Name                   = "Controls"
+    controls.Name = "Controls"
+    controls.Size = offset(1, 1)
     controls.BackgroundTransparency = 1
-    controls.AnchorPoint            = Vector2.new(1, 0)
-    controls.Position               = UDim2.new(1, -12, 0, topBtnY)
-    controls.Size                   = offset(96, BTN_H)
-    controls.Parent                 = topbar
+    controls.Parent = topbar
 
-    local minimizeBtn = makeTopbarButton(
-        CONFIG.ICON_MINIMIZE,
-        CONFIG.FALLBACK_MINIMIZE,
-        Theme.Text,
-        44,
-        18
-    )
-    minimizeBtn.Position = offset(0, 0)
-    minimizeBtn.Parent   = controls
-    register("Buttons", "Minimize", {
-        Button = minimizeBtn,
-        Click  = function(cb) return trackConn(minimizeBtn.MouseButton1Click:Connect(cb)) end,
-    })
-
-    local closeBtn = makeTopbarButton(
-        CONFIG.ICON_CLOSE,
-        CONFIG.FALLBACK_CLOSE,
-        Theme.Danger,
-        44,
-        18
-    )
-    closeBtn.Position = offset(52, 0)
-    closeBtn.Parent   = controls
-    register("Buttons", "Close", {
-        Button = closeBtn,
-        Click  = function(cb) return trackConn(closeBtn.MouseButton1Click:Connect(cb)) end,
-    })
-
-    -- ── MINIMIERTER MODUS ──────────────────────────────────────────
+    -- ── MINIMIERTER MODUS (OPEN GUI TEXT RESTORE) ───────────────────
     local miniFrame = Instance.new("Frame")
     miniFrame.Name = "MiniFrame"
     miniFrame.Size = offset(MINI_SIZE.X, MINI_SIZE.Y)
     miniFrame.BackgroundColor3 = Theme.Glass
-    miniFrame.BackgroundTransparency = 0.15
+    miniFrame.BackgroundTransparency = 0.05
     miniFrame.BorderSizePixel = 0
     miniFrame.ClipsDescendants = true
     miniFrame.Visible = false
-    miniFrame.ZIndex = 3
+    miniFrame.ZIndex = 30
+    miniFrame.Active = true
     miniFrame.Parent = gui
-    corner(miniFrame, 16)
-    stroke(miniFrame, Theme.Accent, 0.50, 2)
+    corner(miniFrame, 22)
+    stroke(miniFrame, Theme.Accent, 0.60, 1.5)
 
-    local function positionMiniFrame()
-        if not minimized then return end
-        if not miniFrame:GetAttribute("N0BD_DragPosition") then
-            local vp = getViewport()
-            miniFrame.Position = offset(
-                math.floor((vp.X - MINI_SIZE.X) * 0.5),
-                16
-            )
-        end
-    end
-    positionMiniFrame()
-
-    local miniGlass = Instance.new("Frame")
-    miniGlass.Size = UDim2.new(1, 0, 1, 0)
-    miniGlass.BackgroundColor3 = Theme.Panel
-    miniGlass.BackgroundTransparency = 0.5
-    miniGlass.BorderSizePixel = 0
-    miniGlass.Parent = miniFrame
-    corner(miniGlass, 16)
-
-    local miniIcon = Instance.new("TextLabel")
-    miniIcon.Name = "MiniIcon"
-    miniIcon.Size = UDim2.new(0, 40, 1, 0)
-    miniIcon.BackgroundTransparency = 1
-    miniIcon.Font = Enum.Font.GothamBlack
-    miniIcon.TextSize = 22
-    miniIcon.TextColor3 = Theme.Accent
-    miniIcon.TextXAlignment = Enum.TextXAlignment.Center
-    miniIcon.TextYAlignment = Enum.TextYAlignment.Center
-    miniIcon.Text = "👑"
-    miniIcon.Parent = miniFrame
+    local miniStatusDot = Instance.new("Frame")
+    miniStatusDot.Name = "StatusDot"
+    miniStatusDot.Size = UDim2.fromOffset(8, 8)
+    miniStatusDot.Position = UDim2.fromOffset(14, 18)
+    miniStatusDot.BackgroundColor3 = Theme.Success
+    miniStatusDot.BorderSizePixel = 0
+    miniStatusDot.Parent = miniFrame
+    corner(miniStatusDot, 999)
 
     local miniTitle = Instance.new("TextLabel")
     miniTitle.Name = "MiniTitle"
-    miniTitle.Size = UDim2.new(1, -100, 1, 0)
-    miniTitle.Position = UDim2.new(0, 44, 0, 0)
+    miniTitle.Size = UDim2.new(1, -95, 0, 16)
+    miniTitle.Position = UDim2.new(0, 28, 0, 7)
     miniTitle.BackgroundTransparency = 1
     miniTitle.Font = Enum.Font.GothamBold
-    miniTitle.TextSize = 14
+    miniTitle.TextSize = 12
     miniTitle.TextColor3 = Theme.Text
     miniTitle.TextXAlignment = Enum.TextXAlignment.Left
-    miniTitle.TextYAlignment = Enum.TextYAlignment.Center
-    miniTitle.Text = "N0BD.HUB"
+    miniTitle.Text = "n0bd.hub"
     miniTitle.Parent = miniFrame
 
-    local miniRestoreBtn = makeTopbarButton(
-        CONFIG.ICON_RESTORE,
-        CONFIG.FALLBACK_RESTORE,
-        Theme.Accent,
-        44,
-        18
-    )
+    local miniSub = Instance.new("TextLabel")
+    miniSub.Name = "MiniSub"
+    miniSub.Size = UDim2.new(1, -95, 0, 12)
+    miniSub.Position = UDim2.new(0, 28, 0, 23)
+    miniSub.BackgroundTransparency = 1
+    miniSub.Font = Enum.Font.GothamMedium
+    miniSub.TextSize = 9
+    miniSub.TextColor3 = Theme.SubText
+    miniSub.TextXAlignment = Enum.TextXAlignment.Left
+    miniSub.Text = "Active"
+    miniSub.Parent = miniFrame
+
+    local miniRestoreBtn = Instance.new("TextButton")
+    miniRestoreBtn.Size = UDim2.fromOffset(58, 28)
     miniRestoreBtn.AnchorPoint = Vector2.new(1, 0.5)
     miniRestoreBtn.Position = UDim2.new(1, -8, 0.5, 0)
+    miniRestoreBtn.BackgroundColor3 = Theme.Card
+    miniRestoreBtn.Text = "open"
+    miniRestoreBtn.TextColor3 = Theme.Accent
+    miniRestoreBtn.Font = Enum.Font.GothamBold
+    miniRestoreBtn.TextSize = 12
+    miniRestoreBtn.LineHeight = 0.95
     miniRestoreBtn.Parent = miniFrame
+    corner(miniRestoreBtn, 8)
+    stroke(miniRestoreBtn, Theme.Stroke, 0.6, 1)
+
     register("Buttons", "MiniRestore", {
         Button = miniRestoreBtn,
         Click  = function(cb) return trackConn(miniRestoreBtn.MouseButton1Click:Connect(cb)) end,
@@ -789,7 +613,6 @@ local function runUi(playerGui)
     body.Active                 = true
     body.Parent                 = main
 
-    -- Sidebar (ohne TabIndicator)
     local sidebar = Instance.new("Frame")
     sidebar.Name             = "Sidebar"
     sidebar.Position         = offset(MARGIN, MARGIN)
@@ -798,15 +621,13 @@ local function runUi(playerGui)
     sidebar.BorderSizePixel  = 0
     sidebar.Active           = true
     sidebar.Parent           = body
-    corner(sidebar, 14)
-    stroke(sidebar, Theme.Stroke, 0.80, 1.2)
-    pad(sidebar, 12, 12, 12, 12)
+    corner(sidebar, 10)
+    stroke(sidebar, Theme.Stroke, 0.80, 1)
+    pad(sidebar, 10, 10, 10, 10)
 
-    -- Sidebar Scroll – OHNE Scrollbar (Thickness = 0)
     local sidebarScroll = Instance.new("ScrollingFrame")
     sidebarScroll.Name = "SidebarScroll"
     sidebarScroll.Size = UDim2.new(1, 0, 1, 0)
-    sidebarScroll.Position = UDim2.new(0, 0, 0, 0)
     sidebarScroll.BackgroundTransparency = 1
     sidebarScroll.BorderSizePixel = 0
     sidebarScroll.ScrollBarThickness = 0
@@ -815,13 +636,11 @@ local function runUi(playerGui)
     sidebarScroll.Parent = sidebar
     sidebarScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 
-    -- UIListLayout für die Tabs
     local sidebarList = Instance.new("UIListLayout")
     sidebarList.SortOrder = Enum.SortOrder.LayoutOrder
-    sidebarList.Padding   = UDim.new(0, 6)
+    sidebarList.Padding   = UDim.new(0, 4)
     sidebarList.Parent    = sidebarScroll
 
-    -- Canvas-Größe aktualisieren
     local function updateSidebarCanvas()
         local h = sidebarList.AbsoluteContentSize.Y
         sidebarScroll.CanvasSize = UDim2.new(0, 0, 0, h + 8)
@@ -830,7 +649,6 @@ local function runUi(playerGui)
     trackConn(sidebarScroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateSidebarCanvas))
     task.defer(updateSidebarCanvas)
 
-    -- Content
     local content = Instance.new("Frame")
     content.Name             = "Content"
     content.Position         = offset(MARGIN + SIDEBAR_W + GAP, MARGIN)
@@ -839,9 +657,83 @@ local function runUi(playerGui)
     content.BorderSizePixel  = 0
     content.Active           = true
     content.Parent           = body
-    corner(content, 14)
-    stroke(content, Theme.Stroke, 0.80, 1.2)
-    pad(content, 14, 14, 14, 14)
+    corner(content, 10)
+    stroke(content, Theme.Stroke, 0.80, 1)
+    pad(content, 12, 12, 12, 12)
+
+    -- ── RESIZE GRIP ────────────────────────────────────────────────
+    local resizeGrip = Instance.new("Frame")
+    resizeGrip.Name = "ResizeGrip"
+    resizeGrip.Size = UDim2.fromOffset(20, 20)
+    resizeGrip.AnchorPoint = Vector2.new(1, 1)
+    resizeGrip.Position = UDim2.new(1, 0, 1, 0)
+    resizeGrip.BackgroundTransparency = 1
+    resizeGrip.ZIndex = 50
+    resizeGrip.Parent = main
+
+    local gripIcon = Instance.new("TextLabel")
+    gripIcon.Size = UDim2.fromScale(1, 1)
+    gripIcon.BackgroundTransparency = 1
+    gripIcon.Text = "///"
+    gripIcon.TextColor3 = Theme.SubText
+    gripIcon.TextSize = 10
+    gripIcon.Font = Enum.Font.GothamBold
+    gripIcon.TextXAlignment = Enum.TextXAlignment.Right
+    gripIcon.TextYAlignment = Enum.TextYAlignment.Bottom
+    gripIcon.Parent = resizeGrip
+
+    local scaleIndicator = Instance.new("TextLabel")
+    scaleIndicator.Name = "ScaleIndicator"
+    scaleIndicator.Size = UDim2.fromOffset(80, 22)
+    scaleIndicator.AnchorPoint = Vector2.new(1, 1)
+    scaleIndicator.Position = UDim2.new(1, -6, 1, -22)
+    scaleIndicator.BackgroundColor3 = Theme.Card
+    scaleIndicator.TextColor3 = Theme.Accent
+    scaleIndicator.Font = Enum.Font.GothamBold
+    scaleIndicator.TextSize = 11
+    scaleIndicator.Text = "Scale: 100%"
+    scaleIndicator.Visible = false
+    scaleIndicator.ZIndex = 60
+    scaleIndicator.Parent = main
+    corner(scaleIndicator, 6)
+    stroke(scaleIndicator, Theme.Stroke, 0.5, 1)
+
+    local externalSetSliderValue = nil
+    local isResizing = false
+
+    trackConn(resizeGrip.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isResizing = true
+            scaleIndicator.Visible = true
+        end
+    end))
+
+    trackConn(UserInputService.InputChanged:Connect(function(input)
+        if isResizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local mousePos = input.Position
+            local mainPos = main.AbsolutePosition
+            
+            local currentDist = (Vector2.new(mousePos.X, mousePos.Y) - mainPos).Magnitude
+            local baseDist = WINDOW_SIZE.Magnitude
+            
+            local newScale = math.clamp(currentDist / baseDist, 0.8, 1.2)
+            uiScale.Scale = newScale
+
+            local percent = math.floor(newScale * 100 + 0.5)
+            scaleIndicator.Text = "Scale: " .. tostring(percent) .. "%"
+
+            if externalSetSliderValue then
+                externalSetSliderValue(percent)
+            end
+        end
+    end))
+
+    trackConn(UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isResizing = false
+            scaleIndicator.Visible = false
+        end
+    end))
 
     -- ── TAB & PAGE SYSTEM ──────────────────────────────────────────
     local pages       = {}
@@ -856,8 +748,9 @@ local function runUi(playerGui)
         page.BorderSizePixel            = 0
         page.Size                       = UDim2.fromScale(1, 1)
         page.CanvasSize                 = UDim2.new(0, 0, 0, 0)
-        page.ScrollBarThickness         = 4
-        page.ScrollBarImageTransparency = 0.40
+        page.ScrollBarThickness         = 3
+        page.ScrollBarImageColor3       = Theme.Stroke
+        page.ScrollBarImageTransparency = 0.3
         page.ScrollingDirection         = Enum.ScrollingDirection.Y
         page.ElasticBehavior            = Enum.ElasticBehavior.WhenScrollable
         page.Visible                    = false
@@ -871,7 +764,7 @@ local function runUi(playerGui)
 
         local list = Instance.new("UIListLayout")
         list.SortOrder = Enum.SortOrder.LayoutOrder
-        list.Padding   = UDim.new(0, 14)
+        list.Padding   = UDim.new(0, 10)
         list.Parent    = stack
 
         local function refresh()
@@ -890,22 +783,11 @@ local function runUi(playerGui)
     local function animatePageEntry(page)
         local children = page.Stack:GetChildren()
         for i, child in ipairs(children) do
-            if child:IsA("Frame") and child.ClassName ~= "UIListLayout" and not child:IsA("UIListLayout") then
-                local scale = Instance.new("UIScale")
-                scale.Scale = 0.92
-                scale.Parent = child
-
+            if child:IsA("Frame") and child.ClassName ~= "UIListLayout" then
                 child.BackgroundTransparency = 1
-                child.Position = UDim2.new(0, 0, 0, 16)
-
-                task.delay(i * 0.04, function()
+                task.delay(i * 0.02, function()
                     if child.Parent then
-                        tween(child, 0.35, {
-                            BackgroundTransparency = 0,
-                            Position = UDim2.new(0, 0, 0, 0)
-                        }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-                        tween(scale, 0.35, { Scale = 1 }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-                        task.delay(0.4, function() if scale then scale:Destroy() end end)
+                        tween(child, 0.2, { BackgroundTransparency = 0 }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
                     end
                 end)
             end
@@ -920,19 +802,14 @@ local function runUi(playerGui)
             local isActive = (tabName == name)
             entry.Page.Visible = isActive
             if isActive then
-                entry.Page.Position = UDim2.new(0.06, 0, 0, 0)
-                tween(entry.Page, 0.25, {
-                    Position = UDim2.new(0, 0, 0, 0)
-                }, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
                 task.defer(function() animatePageEntry(entry.Page) end)
             end
         end
 
-        -- Aktiven Tab hervorheben (ohne TabIndicator)
         for tabName, btn in pairs(tabs) do
             local active = (tabName == name)
-            setButtonBaseColor(btn, active and Theme.CardActive or Theme.Card)
-            btn.TextColor3 = active and Theme.Accent or Theme.Text
+            setButtonBaseColor(btn, active and Theme.CardActive or Theme.Panel)
+            btn.TextColor3 = active and Theme.Accent or Theme.SubText
         end
     end
 
@@ -945,22 +822,20 @@ local function runUi(playerGui)
         local tab = Instance.new("TextButton")
         tab.Name             = name .. "Tab"
         tab.AutoButtonColor  = false
-        tab.BackgroundColor3 = Theme.Card
+        tab.BackgroundColor3 = Theme.Panel
         tab.BorderSizePixel  = 0
-        tab.Size             = UDim2.new(1, 0, 0, 42)
-        tab.Font             = Enum.Font.GothamSemibold
-        tab.TextSize         = 13
-        tab.TextColor3       = Theme.Text
+        tab.Size             = UDim2.new(1, 0, 0, 32)
+        tab.Font             = Enum.Font.GothamMedium
+        tab.TextSize         = 12
+        tab.TextColor3       = Theme.SubText
         tab.TextXAlignment   = Enum.TextXAlignment.Left
         tab.TextYAlignment   = Enum.TextYAlignment.Center
         tab.TextTruncate     = Enum.TextTruncate.AtEnd
-        tab.LineHeight       = 1
         tab.Text             = displayText
         tab.LayoutOrder      = tabOrder
         tab.Parent           = sidebarScroll
         corner(tab, BTN_RADIUS)
-        stroke(tab, Theme.Stroke, 0.80, 1.2)
-        pad(tab, 0, 14, 0, 14)
+        pad(tab, 0, 10, 0, 10)
 
         trackConn(tab.MouseEnter:Connect(function()
             if selectedTab ~= name then
@@ -969,7 +844,7 @@ local function runUi(playerGui)
         end))
         trackConn(tab.MouseLeave:Connect(function()
             if selectedTab ~= name then
-                tween(tab, 0.08, { BackgroundColor3 = Theme.Card }, Enum.EasingStyle.Quad)
+                tween(tab, 0.08, { BackgroundColor3 = Theme.Panel }, Enum.EasingStyle.Quad)
             end
         end))
         trackConn(tab.MouseButton1Click:Connect(function()
@@ -999,14 +874,14 @@ local function runUi(playerGui)
         local opts = readOptions(options, text)
         local header = Instance.new("TextLabel")
         header.BackgroundTransparency = 1
-        header.Size                   = UDim2.new(1, 0, 0, 34)
+        header.Size                   = UDim2.new(1, 0, 0, 26)
         header.Font                   = Enum.Font.GothamBold
-        header.TextSize               = 15
+        header.TextSize               = 13
         header.TextColor3             = Theme.Accent
         header.TextXAlignment         = Enum.TextXAlignment.Left
         header.TextYAlignment         = Enum.TextYAlignment.Center
         header.TextTruncate           = Enum.TextTruncate.AtEnd
-        header.Text                   = "◆ " .. text
+        header.Text                   = text:upper()
         header.Parent                 = page.Stack
         register("Headers", opts.Id, { Label = header, Text = header })
         return header
@@ -1016,9 +891,9 @@ local function runUi(playerGui)
         local opts = readOptions(options, "Divider")
         local div = Instance.new("Frame")
         div.BackgroundColor3       = Theme.Stroke
-        div.BackgroundTransparency = 0.70
+        div.BackgroundTransparency = 0.80
         div.BorderSizePixel        = 0
-        div.Size                   = UDim2.new(1, 0, 0, 2)
+        div.Size                   = UDim2.new(1, 0, 0, 1)
         div.Parent                 = page.Stack
         register("Dividers", opts.Id, { Frame = div })
         return div
@@ -1035,23 +910,12 @@ local function runUi(playerGui)
         card.ClipsDescendants = false
         card.Parent           = page.Stack
         corner(card, CARD_RADIUS)
-        stroke(card, Theme.Stroke, 0.75, 1.5)
+        stroke(card, Theme.Stroke, 0.75, 1)
         pad(card, CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-
-        addBreathing(card)
-
-        trackConn(card.MouseEnter:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, -4) }, Enum.EasingStyle.Quad)
-            TweenService:Create(card, TweenInfo.new(0.15), { BackgroundColor3 = Theme.CardHover }):Play()
-        end))
-        trackConn(card.MouseLeave:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, 0) }, Enum.EasingStyle.Quad)
-            TweenService:Create(card, TweenInfo.new(0.15), { BackgroundColor3 = Theme.Card }):Play()
-        end))
 
         local innerList = Instance.new("UIListLayout")
         innerList.SortOrder = Enum.SortOrder.LayoutOrder
-        innerList.Padding   = UDim.new(0, 12)
+        innerList.Padding   = UDim.new(0, 10)
         innerList.Parent    = card
 
         register("Cards", opts.Id, { Card = card, List = innerList })
@@ -1065,27 +929,19 @@ local function runUi(playerGui)
         card.Name             = (titleText:gsub("%s+", "")) .. "Card"
         card.BackgroundColor3 = Theme.Card
         card.BorderSizePixel  = 0
-        card.Size             = UDim2.new(1, 0, 0, 84)
+        card.Size             = UDim2.new(1, 0, 0, 68)
         card.ClipsDescendants = false
         card.Parent           = page.Stack
         corner(card, CARD_RADIUS)
-        stroke(card, Theme.Stroke, 0.75, 1.5)
+        stroke(card, Theme.Stroke, 0.75, 1)
         pad(card, CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-        addBreathing(card)
-
-        trackConn(card.MouseEnter:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, -4) }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(card.MouseLeave:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, 0) }, Enum.EasingStyle.Quad)
-        end))
 
         local titleLabel = Instance.new("TextLabel")
         titleLabel.BackgroundTransparency = 1
         titleLabel.Position               = UDim2.new(0, 0, 0, 0)
-        titleLabel.Size                   = UDim2.new(1, -(opts.ButtonWidth or 130) - 14, 0, 26)
-        titleLabel.Font                   = Enum.Font.GothamSemibold
-        titleLabel.TextSize               = 14
+        titleLabel.Size                   = UDim2.new(1, -(opts.ButtonWidth or 120) - 10, 0, 20)
+        titleLabel.Font                   = Enum.Font.GothamBold
+        titleLabel.TextSize               = 13
         titleLabel.TextColor3             = Theme.Text
         titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
         titleLabel.TextYAlignment         = Enum.TextYAlignment.Center
@@ -1095,37 +951,33 @@ local function runUi(playerGui)
 
         local descLabel = Instance.new("TextLabel")
         descLabel.BackgroundTransparency = 1
-        descLabel.Position               = UDim2.new(0, 0, 0, 28)
-        descLabel.Size                   = UDim2.new(1, -(opts.ButtonWidth or 130) - 14, 0, 32)
+        descLabel.Position               = UDim2.new(0, 0, 0, 20)
+        descLabel.Size                   = UDim2.new(1, -(opts.ButtonWidth or 120) - 10, 0, 24)
         descLabel.Font                   = Enum.Font.Gotham
-        descLabel.TextSize               = 12
+        descLabel.TextSize               = 11
         descLabel.TextColor3             = Theme.SubText
         descLabel.TextXAlignment         = Enum.TextXAlignment.Left
         descLabel.TextYAlignment         = Enum.TextYAlignment.Top
         descLabel.TextWrapped            = true
-        descLabel.LineHeight             = 1.2
         descLabel.Text                   = descText
         descLabel.Parent                 = card
 
-        local btnW = opts.ButtonWidth or 120
+        local btnW = opts.ButtonWidth or 110
         local btn  = Instance.new("TextButton")
         btn.AutoButtonColor  = false
-        btn.BackgroundColor3 = Theme.Card
+        btn.BackgroundColor3 = Theme.Panel
         btn.BorderSizePixel  = 0
         btn.AnchorPoint      = Vector2.new(1, 0.5)
         btn.Position         = UDim2.new(1, 0, 0.5, 0)
         btn.Size             = offset(btnW, BTN_H)
         btn.Font             = Enum.Font.GothamBold
-        btn.TextSize         = 13
-        btn.TextColor3       = Theme.Text
+        btn.TextSize         = 12
+        btn.TextColor3       = Theme.Accent
         btn.Text             = buttonText
-        btn.TextXAlignment   = Enum.TextXAlignment.Center
-        btn.TextYAlignment   = Enum.TextYAlignment.Center
-        btn.TextTruncate     = Enum.TextTruncate.AtEnd
         btn.Parent           = card
-        setButtonBaseColor(btn, Theme.Card)
+        setButtonBaseColor(btn, Theme.Panel)
         corner(btn, BTN_RADIUS)
-        stroke(btn, Theme.Stroke, 0.70, 1.5)
+        stroke(btn, Theme.Stroke, 0.70, 1)
 
         trackConn(btn.MouseEnter:Connect(function()
             tween(btn, 0.08, { BackgroundColor3 = Theme.CardHover }, Enum.EasingStyle.Quad)
@@ -1136,10 +988,6 @@ local function runUi(playerGui)
         trackConn(btn.MouseButton1Click:Connect(function()
             local mousePos = UserInputService:GetMouseLocation()
             spawnRipple(btn, mousePos.X, mousePos.Y)
-            TweenService:Create(btn, TweenInfo.new(0.08), { Size = offset(btnW * 1.06, BTN_H * 1.06) }):Play()
-            task.delay(0.08, function()
-                TweenService:Create(btn, TweenInfo.new(0.08), { Size = offset(btnW, BTN_H) }):Play()
-            end)
         end))
 
         local action = register("Buttons", opts.Id, {
@@ -1170,27 +1018,19 @@ local function runUi(playerGui)
         card.Name             = (titleText:gsub("%s+", "")) .. "ToggleCard"
         card.BackgroundColor3 = Theme.Card
         card.BorderSizePixel  = 0
-        card.Size             = UDim2.new(1, 0, 0, 84)
+        card.Size             = UDim2.new(1, 0, 0, 64)
         card.ClipsDescendants = false
         card.Parent           = page.Stack
         corner(card, CARD_RADIUS)
-        stroke(card, Theme.Stroke, 0.75, 1.5)
+        stroke(card, Theme.Stroke, 0.75, 1)
         pad(card, CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-        addBreathing(card)
-
-        trackConn(card.MouseEnter:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, -4) }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(card.MouseLeave:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, 0) }, Enum.EasingStyle.Quad)
-        end))
 
         local titleLabel = Instance.new("TextLabel")
         titleLabel.BackgroundTransparency = 1
         titleLabel.Position               = UDim2.new(0, 0, 0, 0)
-        titleLabel.Size                   = UDim2.new(1, -100, 0, 26)
-        titleLabel.Font                   = Enum.Font.GothamSemibold
-        titleLabel.TextSize               = 14
+        titleLabel.Size                   = UDim2.new(1, -60, 0, 20)
+        titleLabel.Font                   = Enum.Font.GothamBold
+        titleLabel.TextSize               = 13
         titleLabel.TextColor3             = Theme.Text
         titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
         titleLabel.TextYAlignment         = Enum.TextYAlignment.Center
@@ -1200,37 +1040,34 @@ local function runUi(playerGui)
 
         local descLabel = Instance.new("TextLabel")
         descLabel.BackgroundTransparency = 1
-        descLabel.Position               = UDim2.new(0, 0, 0, 28)
-        descLabel.Size                   = UDim2.new(1, -100, 0, 32)
+        descLabel.Position               = UDim2.new(0, 0, 0, 20)
+        descLabel.Size                   = UDim2.new(1, -60, 0, 22)
         descLabel.Font                   = Enum.Font.Gotham
-        descLabel.TextSize               = 12
+        descLabel.TextSize               = 11
         descLabel.TextColor3             = Theme.SubText
         descLabel.TextXAlignment         = Enum.TextXAlignment.Left
         descLabel.TextYAlignment         = Enum.TextYAlignment.Top
         descLabel.TextWrapped            = true
-        descLabel.LineHeight             = 1.2
         descLabel.Text                   = descText
         descLabel.Parent                 = card
 
         local switchFrame = Instance.new("Frame")
         switchFrame.AnchorPoint = Vector2.new(1, 0.5)
         switchFrame.Position    = UDim2.new(1, 0, 0.5, 0)
-        switchFrame.Size        = offset(64, 34)
+        switchFrame.Size        = offset(38, 20)
         switchFrame.BackgroundColor3 = enabled and Theme.ToggleOn or Theme.ToggleOff
         switchFrame.BorderSizePixel  = 0
         switchFrame.Parent      = card
         corner(switchFrame, 999)
-        stroke(switchFrame, Theme.Stroke, 0.40, 1.5)
 
         local knob = Instance.new("Frame")
-        knob.Size        = offset(28, 28)
-        knob.AnchorPoint = Vector2.new(0.5, 0.5)
-        knob.Position    = UDim2.new(enabled and 1 or 0, (enabled and -14 or 14), 0.5, 0)
-        knob.BackgroundColor3 = Theme.Text
+        knob.Size        = offset(16, 16)
+        knob.AnchorPoint = Vector2.new(0, 0.5)
+        knob.Position    = enabled and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)
+        knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         knob.BorderSizePixel  = 0
         knob.Parent = switchFrame
         corner(knob, 999)
-        stroke(knob, Theme.Stroke, 0.20, 1)
 
         local switchBtn = Instance.new("TextButton")
         switchBtn.AutoButtonColor = false
@@ -1240,17 +1077,8 @@ local function runUi(playerGui)
         switchBtn.Parent = switchFrame
 
         local function applyVisual()
-            switchFrame.BackgroundColor3 = enabled and Theme.ToggleOn or Theme.ToggleOff
-            local targetX = enabled and 1 or 0
-            local targetOff = enabled and -14 or 14
-            tween(knob, 0.3, { Position = UDim2.new(targetX, targetOff, 0.5, 0) }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-
-            if enabled then
-                TweenService:Create(switchFrame, TweenInfo.new(0.3), { BackgroundTransparency = 0.15 }):Play()
-                task.delay(0.3, function()
-                    TweenService:Create(switchFrame, TweenInfo.new(0.3), { BackgroundTransparency = 0 }):Play()
-                end)
-            end
+            tween(switchFrame, 0.2, { BackgroundColor3 = enabled and Theme.ToggleOn or Theme.ToggleOff })
+            tween(knob, 0.2, { Position = enabled and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0) })
         end
 
         trackConn(switchBtn.MouseButton1Click:Connect(function()
@@ -1303,27 +1131,19 @@ local function runUi(playerGui)
         card.Name             = (titleText:gsub("%s+", "")) .. "SliderCard"
         card.BackgroundColor3 = Theme.Card
         card.BorderSizePixel  = 0
-        card.Size             = UDim2.new(1, 0, 0, 102)
+        card.Size             = UDim2.new(1, 0, 0, 78)
         card.ClipsDescendants = false
         card.Parent           = page.Stack
         corner(card, CARD_RADIUS)
-        stroke(card, Theme.Stroke, 0.75, 1.5)
+        stroke(card, Theme.Stroke, 0.75, 1)
         pad(card, CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-        addBreathing(card)
-
-        trackConn(card.MouseEnter:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, -4) }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(card.MouseLeave:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, 0) }, Enum.EasingStyle.Quad)
-        end))
 
         local titleLabel = Instance.new("TextLabel")
         titleLabel.BackgroundTransparency = 1
         titleLabel.Position               = UDim2.new(0, 0, 0, 0)
-        titleLabel.Size                   = UDim2.new(0.65, 0, 0, 24)
-        titleLabel.Font                   = Enum.Font.GothamSemibold
-        titleLabel.TextSize               = 14
+        titleLabel.Size                   = UDim2.new(0.65, 0, 0, 18)
+        titleLabel.Font                   = Enum.Font.GothamBold
+        titleLabel.TextSize               = 13
         titleLabel.TextColor3             = Theme.Text
         titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
         titleLabel.TextYAlignment         = Enum.TextYAlignment.Center
@@ -1335,9 +1155,9 @@ local function runUi(playerGui)
         valueLabel.BackgroundTransparency = 1
         valueLabel.AnchorPoint            = Vector2.new(1, 0)
         valueLabel.Position               = UDim2.new(1, 0, 0, 0)
-        valueLabel.Size                   = UDim2.new(0.35, 0, 0, 24)
+        valueLabel.Size                   = UDim2.new(0.35, 0, 0, 18)
         valueLabel.Font                   = Enum.Font.GothamBold
-        valueLabel.TextSize               = 14
+        valueLabel.TextSize               = 12
         valueLabel.TextColor3             = Theme.Accent
         valueLabel.TextXAlignment         = Enum.TextXAlignment.Right
         valueLabel.TextYAlignment         = Enum.TextYAlignment.Center
@@ -1346,10 +1166,10 @@ local function runUi(playerGui)
 
         local descLabel = Instance.new("TextLabel")
         descLabel.BackgroundTransparency = 1
-        descLabel.Position               = UDim2.new(0, 0, 0, 26)
-        descLabel.Size                   = UDim2.new(1, 0, 0, 22)
+        descLabel.Position               = UDim2.new(0, 0, 0, 18)
+        descLabel.Size                   = UDim2.new(1, 0, 0, 18)
         descLabel.Font                   = Enum.Font.Gotham
-        descLabel.TextSize               = 12
+        descLabel.TextSize               = 11
         descLabel.TextColor3             = Theme.SubText
         descLabel.TextXAlignment         = Enum.TextXAlignment.Left
         descLabel.TextYAlignment         = Enum.TextYAlignment.Center
@@ -1358,13 +1178,12 @@ local function runUi(playerGui)
         descLabel.Parent                 = card
 
         local bar = Instance.new("Frame")
-        bar.Position         = UDim2.new(0, 0, 0, 54)
-        bar.Size             = UDim2.new(1, 0, 0, 14)
-        bar.BackgroundColor3 = Theme.Muted
+        bar.Position         = UDim2.new(0, 0, 0, 42)
+        bar.Size             = UDim2.new(1, 0, 0, 6)
+        bar.BackgroundColor3 = Theme.InputBg
         bar.BorderSizePixel  = 0
         bar.Parent           = card
         corner(bar, 999)
-        stroke(bar, Theme.Stroke, 0.75, 1.2)
 
         local fill = Instance.new("Frame")
         fill.BackgroundColor3 = Theme.Accent
@@ -1373,36 +1192,24 @@ local function runUi(playerGui)
         corner(fill, 999)
 
         local knob = Instance.new("Frame")
-        knob.Size             = offset(26, 26)
+        knob.Size             = offset(14, 14)
         knob.AnchorPoint      = Vector2.new(0.5, 0.5)
-        knob.BackgroundColor3 = Theme.Text
+        knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         knob.BorderSizePixel  = 0
         knob.Parent           = bar
         corner(knob, 999)
-        stroke(knob, Theme.Stroke, 0.30, 2)
 
         local currentValue = default
         local dragging     = false
-        local pendingX     = nil
 
-        local function applyValue(rel)
+        local function applyValue(rel, skipCallback)
             local v = math.floor(min + (max - min) * rel + 0.5)
             v = math.clamp(v, min, max)
             currentValue    = v
             fill.Size       = UDim2.new(rel, 0, 1, 0)
             knob.Position   = UDim2.new(rel, 0, 0.5, 0)
             valueLabel.Text = tostring(v)
-            if callback then task.spawn(callback, v) end
-
-            TweenService:Create(knob, TweenInfo.new(0.08), { Size = offset(30, 30) }):Play()
-            task.delay(0.08, function()
-                TweenService:Create(knob, TweenInfo.new(0.08), { Size = offset(26, 26) }):Play()
-            end)
-
-            TweenService:Create(bar, TweenInfo.new(0.08), { BackgroundColor3 = Theme.Accent }):Play()
-            task.delay(0.12, function()
-                TweenService:Create(bar, TweenInfo.new(0.08), { BackgroundColor3 = Theme.Muted }):Play()
-            end)
+            if callback and not skipCallback then task.spawn(callback, v) end
         end
 
         local function setFromX(x)
@@ -1423,19 +1230,23 @@ local function runUi(playerGui)
                 dragging = true; setFromX(input.Position.X)
             end
         end))
-        trackConn(RunService.RenderStepped:Connect(function()
-            if dragging and pendingX then setFromX(pendingX); pendingX = nil end
-        end))
         trackConn(UserInputService.InputChanged:Connect(function(input)
-            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-                pendingX = input.Position.X
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                setFromX(input.Position.X)
             end
         end))
         trackConn(UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                dragging = false; pendingX = nil
+                dragging = false
             end
         end))
+
+        if opts.Id == "UIScale" then
+            externalSetSliderValue = function(val)
+                val = math.clamp(val, min, max)
+                applyValue((val - min) / math.max(max - min, 1), true)
+            end
+        end
 
         local slider = {
             Get    = function() return currentValue end,
@@ -1467,26 +1278,18 @@ local function runUi(playerGui)
         card.Name             = (titleText:gsub("%s+", "")) .. "LabelCard"
         card.BackgroundColor3 = Theme.Card
         card.BorderSizePixel  = 0
-        card.Size             = UDim2.new(1, 0, 0, 52)
+        card.Size             = UDim2.new(1, 0, 0, 42)
         card.ClipsDescendants = false
         card.Parent           = page.Stack
         corner(card, CARD_RADIUS)
-        stroke(card, Theme.Stroke, 0.75, 1.5)
+        stroke(card, Theme.Stroke, 0.75, 1)
         pad(card, 0, CARD_PADDING, 0, CARD_PADDING)
-        addBreathing(card)
-
-        trackConn(card.MouseEnter:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, -4) }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(card.MouseLeave:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, 0) }, Enum.EasingStyle.Quad)
-        end))
 
         local tl = Instance.new("TextLabel")
         tl.BackgroundTransparency = 1
         tl.Size                   = UDim2.new(0.55, 0, 1, 0)
-        tl.Font                   = Enum.Font.GothamSemibold
-        tl.TextSize               = 13
+        tl.Font                   = Enum.Font.GothamMedium
+        tl.TextSize               = 12
         tl.TextColor3             = Theme.SubText
         tl.TextXAlignment         = Enum.TextXAlignment.Left
         tl.TextYAlignment         = Enum.TextYAlignment.Center
@@ -1500,17 +1303,13 @@ local function runUi(playerGui)
         vl.Position               = UDim2.new(1, 0, 0.5, 0)
         vl.Size                   = UDim2.new(0.45, 0, 1, 0)
         vl.Font                   = Enum.Font.GothamBold
-        vl.TextSize               = 13
+        vl.TextSize               = 12
         vl.TextColor3             = Theme.Accent
         vl.TextXAlignment         = Enum.TextXAlignment.Right
         vl.TextYAlignment         = Enum.TextYAlignment.Center
         vl.TextTruncate           = Enum.TextTruncate.AtEnd
         vl.Text                   = tostring(valueText or "")
         vl.Parent                 = card
-
-        TweenService:Create(vl, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-            TextColor3 = Theme.Accent2
-        }):Play()
 
         local label = {
             SetValue   = function(v) vl.Text = tostring(v) end,
@@ -1544,26 +1343,18 @@ local function runUi(playerGui)
         card.Name             = (title:gsub("%s+", "")) .. "DropdownCard"
         card.BackgroundColor3 = Theme.Card
         card.BorderSizePixel  = 0
-        card.Size             = UDim2.new(1, 0, 0, 64)
+        card.Size             = UDim2.new(1, 0, 0, 52)
         card.ClipsDescendants = false
         card.Parent           = page.Stack
         corner(card, CARD_RADIUS)
-        stroke(card, Theme.Stroke, 0.75, 1.5)
+        stroke(card, Theme.Stroke, 0.75, 1)
         pad(card, CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-        addBreathing(card)
-
-        trackConn(card.MouseEnter:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, -4) }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(card.MouseLeave:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, 0) }, Enum.EasingStyle.Quad)
-        end))
 
         local titleLabel = Instance.new("TextLabel")
         titleLabel.BackgroundTransparency = 1
         titleLabel.Size                   = UDim2.new(0.45, 0, 1, 0)
-        titleLabel.Font                   = Enum.Font.GothamSemibold
-        titleLabel.TextSize               = 14
+        titleLabel.Font                   = Enum.Font.GothamBold
+        titleLabel.TextSize               = 13
         titleLabel.TextColor3             = Theme.Text
         titleLabel.TextXAlignment         = Enum.TextXAlignment.Left
         titleLabel.TextYAlignment         = Enum.TextYAlignment.Center
@@ -1577,9 +1368,9 @@ local function runUi(playerGui)
         valueBtn.BorderSizePixel  = 0
         valueBtn.AnchorPoint      = Vector2.new(1, 0.5)
         valueBtn.Position         = UDim2.new(1, 0, 0.5, 0)
-        valueBtn.Size             = offset(170, BTN_H)
-        valueBtn.Font             = Enum.Font.GothamSemibold
-        valueBtn.TextSize         = 13
+        valueBtn.Size             = offset(150, 28)
+        valueBtn.Font             = Enum.Font.GothamMedium
+        valueBtn.TextSize         = 12
         valueBtn.TextColor3       = Theme.Text
         valueBtn.TextXAlignment   = Enum.TextXAlignment.Left
         valueBtn.TextYAlignment   = Enum.TextYAlignment.Center
@@ -1587,25 +1378,8 @@ local function runUi(playerGui)
         valueBtn.Text             = "  " .. tostring(selectedValue)
         valueBtn.Parent           = card
         corner(valueBtn, BTN_RADIUS)
-        stroke(valueBtn, Theme.Stroke, 0.60, 1.2)
+        stroke(valueBtn, Theme.Stroke, 0.60, 1)
         pad(valueBtn, 0, 8, 0, 8)
-        trackConn(valueBtn.MouseButton1Click:Connect(function()
-            local mousePos = UserInputService:GetMouseLocation()
-            spawnRipple(valueBtn, mousePos.X, mousePos.Y)
-        end))
-
-        local arrow = Instance.new("TextLabel")
-        arrow.BackgroundTransparency = 1
-        arrow.AnchorPoint            = Vector2.new(1, 0.5)
-        arrow.Position               = UDim2.new(1, -8, 0.5, 0)
-        arrow.Size                   = offset(18, 18)
-        arrow.Font                   = Enum.Font.GothamBold
-        arrow.TextSize               = 15
-        arrow.TextColor3             = Theme.SubText
-        arrow.TextXAlignment         = Enum.TextXAlignment.Center
-        arrow.TextYAlignment         = Enum.TextYAlignment.Center
-        arrow.Text                   = "▾"
-        arrow.Parent                 = valueBtn
 
         local popup
         local function closePopup()
@@ -1616,57 +1390,35 @@ local function runUi(playerGui)
             if popup then closePopup() end
             local absPos = valueBtn.AbsolutePosition
             local absSize = valueBtn.AbsoluteSize
-            if absPos.X == 0 and absPos.Y == 0 then
-                task.wait(0.05)
-                absPos = valueBtn.AbsolutePosition
-                absSize = valueBtn.AbsoluteSize
-            end
-            local popupWidth = 190
-            local popupHeight = math.min(#options * 36 + 8, 170)
+            local popupWidth = 160
+            local popupHeight = math.min(#options * 30 + 6, 150)
             local x = absPos.X + absSize.X - popupWidth
             local y = absPos.Y + absSize.Y + 4
-            local vp = getViewport()
-            if x + popupWidth > vp.X then x = vp.X - popupWidth - 4 end
-            if y + popupHeight > vp.Y then y = absPos.Y - popupHeight - 4 end
 
             popup = Instance.new("Frame")
             popup.Name               = "DropdownPopup"
-            popup.BackgroundColor3   = Theme.Overlay
-            popup.BackgroundTransparency = 0.15
+            popup.BackgroundColor3   = Theme.Panel
             popup.BorderSizePixel    = 0
             popup.Size               = offset(popupWidth, popupHeight)
             popup.Position           = offset(x, y)
             popup.ZIndex             = 60
             popup.Parent             = gui
-            corner(popup, 10)
-            stroke(popup, Theme.Stroke, 0.25, 2.5)
-
-            local bg = Instance.new("Frame")
-            bg.BackgroundColor3 = Theme.Panel
-            bg.BorderSizePixel  = 0
-            bg.Size             = UDim2.new(1, 0, 1, 0)
-            bg.Parent           = popup
-            corner(bg, 10)
-            bg.ZIndex = 0
-
-            popup.Scale = 0.7
-            popup.BackgroundTransparency = 1
-            tween(popup, 0.18, { Scale = 1, BackgroundTransparency = 0.15 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+            corner(popup, 8)
+            stroke(popup, Theme.Stroke, 0.4, 1)
 
             local list = Instance.new("ScrollingFrame")
             list.BackgroundTransparency = 1
             list.BorderSizePixel        = 0
             list.Size                   = UDim2.new(1, -4, 1, -4)
             list.Position              = UDim2.new(0, 2, 0, 2)
-            list.CanvasSize             = UDim2.new(0, 0, 0, #options * 36)
-            list.ScrollBarThickness     = 4
+            list.CanvasSize             = UDim2.new(0, 0, 0, #options * 28)
+            list.ScrollBarThickness     = 2
             list.ScrollingDirection     = Enum.ScrollingDirection.Y
             list.Parent                 = popup
-            list.ZIndex                 = 1
 
             local layout = Instance.new("UIListLayout")
             layout.SortOrder = Enum.SortOrder.LayoutOrder
-            layout.Padding   = UDim.new(0, 3)
+            layout.Padding   = UDim.new(0, 2)
             layout.Parent    = list
 
             for i, opt in ipairs(options) do
@@ -1674,57 +1426,29 @@ local function runUi(playerGui)
                 btn.AutoButtonColor  = false
                 btn.BackgroundColor3 = (i == selectedIndex) and Theme.CardActive or Theme.Card
                 btn.BorderSizePixel  = 0
-                btn.Size             = UDim2.new(1, 0, 0, 33)
-                btn.Font             = Enum.Font.GothamSemibold
-                btn.TextSize         = 13
+                btn.Size             = UDim2.new(1, 0, 0, 26)
+                btn.Font             = Enum.Font.GothamMedium
+                btn.TextSize         = 11
                 btn.TextColor3       = (i == selectedIndex) and Theme.Accent or Theme.Text
                 btn.TextXAlignment   = Enum.TextXAlignment.Left
                 btn.TextYAlignment   = Enum.TextYAlignment.Center
                 btn.TextTruncate     = Enum.TextTruncate.AtEnd
                 btn.Text             = "  " .. tostring(opt)
                 btn.Parent           = list
-                corner(btn, 6)
-                stroke(btn, Theme.Stroke, 0.75, 1)
+                corner(btn, 4)
 
-                trackConn(btn.MouseEnter:Connect(function()
-                    if selectedIndex ~= i then
-                        tween(btn, 0.06, { BackgroundColor3 = Theme.CardHover }, Enum.EasingStyle.Quad)
-                    end
-                end))
-                trackConn(btn.MouseLeave:Connect(function()
-                    if selectedIndex ~= i then
-                        tween(btn, 0.06, { BackgroundColor3 = Theme.Card }, Enum.EasingStyle.Quad)
-                    end
-                end))
                 trackConn(btn.MouseButton1Click:Connect(function()
                     selectedValue = opt
                     selectedIndex = i
                     valueBtn.Text = "  " .. tostring(opt)
                     closePopup()
                     if callback then task.spawn(callback, opt) end
-                    local mousePos = UserInputService:GetMouseLocation()
-                    spawnRipple(btn, mousePos.X, mousePos.Y)
                 end))
             end
         end
 
         trackConn(valueBtn.MouseButton1Click:Connect(function()
             if popup then closePopup() else openPopup() end
-        end))
-
-        trackConn(UserInputService.InputBegan:Connect(function(input, processed)
-            if processed then return end
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
-                if popup then
-                    local mousePos = input.Position
-                    local absPos = popup.AbsolutePosition
-                    local absSize = popup.AbsoluteSize
-                    if not (mousePos.X >= absPos.X and mousePos.X <= absPos.X + absSize.X and
-                            mousePos.Y >= absPos.Y and mousePos.Y <= absPos.Y + absSize.Y) then
-                        closePopup()
-                    end
-                end
-            end
         end))
 
         local dropdown = {
@@ -1769,26 +1493,18 @@ local function runUi(playerGui)
         card.Name = (title:gsub("%s+", "")) .. "TextInputCard"
         card.BackgroundColor3 = Theme.Card
         card.BorderSizePixel = 0
-        card.Size = UDim2.new(1, 0, 0, 74)
+        card.Size = UDim2.new(1, 0, 0, 64)
         card.ClipsDescendants = false
         card.Parent = page.Stack
         corner(card, CARD_RADIUS)
-        stroke(card, Theme.Stroke, 0.75, 1.5)
+        stroke(card, Theme.Stroke, 0.75, 1)
         pad(card, CARD_PADDING, CARD_PADDING, CARD_PADDING, CARD_PADDING)
-        addBreathing(card)
-
-        trackConn(card.MouseEnter:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, -4) }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(card.MouseLeave:Connect(function()
-            tween(card, 0.15, { Position = UDim2.new(0, 0, 0, 0) }, Enum.EasingStyle.Quad)
-        end))
 
         local titleLabel = Instance.new("TextLabel")
         titleLabel.BackgroundTransparency = 1
-        titleLabel.Size = UDim2.new(1, 0, 0, 24)
-        titleLabel.Font = Enum.Font.GothamSemibold
-        titleLabel.TextSize = 14
+        titleLabel.Size = UDim2.new(1, 0, 0, 18)
+        titleLabel.Font = Enum.Font.GothamBold
+        titleLabel.TextSize = 13
         titleLabel.TextColor3 = Theme.Text
         titleLabel.TextXAlignment = Enum.TextXAlignment.Left
         titleLabel.TextYAlignment = Enum.TextYAlignment.Center
@@ -1798,16 +1514,16 @@ local function runUi(playerGui)
 
         local row = Instance.new("Frame")
         row.BackgroundTransparency = 1
-        row.Position = UDim2.new(0, 0, 0, 28)
-        row.Size = UDim2.new(1, 0, 0, 32)
+        row.Position = UDim2.new(0, 0, 0, 22)
+        row.Size = UDim2.new(1, 0, 0, 28)
         row.Parent = card
 
         local box = Instance.new("TextBox")
         box.BackgroundColor3 = Theme.InputBg
         box.BorderSizePixel = 0
-        box.Size = UDim2.new(1, -100, 1, 0)
+        box.Size = UDim2.new(1, -90, 1, 0)
         box.Font = Enum.Font.Gotham
-        box.TextSize = 13
+        box.TextSize = 12
         box.TextColor3 = Theme.Text
         box.TextXAlignment = Enum.TextXAlignment.Left
         box.TextYAlignment = Enum.TextYAlignment.Center
@@ -1816,39 +1532,25 @@ local function runUi(playerGui)
         box.Text = ""
         box.ClearTextOnFocus = false
         box.Parent = row
-        corner(box, 8)
-        stroke(box, Theme.Stroke, 0.60, 1.2)
-        pad(box, 0, 10, 0, 10)
+        corner(box, 6)
+        stroke(box, Theme.Stroke, 0.60, 1)
+        pad(box, 0, 8, 0, 8)
 
         local btn = Instance.new("TextButton")
         btn.AutoButtonColor = false
         btn.AnchorPoint = Vector2.new(1, 0.5)
         btn.Position = UDim2.new(1, 0, 0.5, 0)
-        btn.Size = offset(90, BTN_H)
-        btn.BackgroundColor3 = Theme.Card
+        btn.Size = offset(80, 28)
+        btn.BackgroundColor3 = Theme.Panel
         btn.BorderSizePixel = 0
         btn.Font = Enum.Font.GothamBold
-        btn.TextSize = 13
-        btn.TextColor3 = Theme.Text
+        btn.TextSize = 11
+        btn.TextColor3 = Theme.Accent
         btn.Text = buttonText or "Send"
-        btn.TextXAlignment = Enum.TextXAlignment.Center
-        btn.TextYAlignment = Enum.TextYAlignment.Center
-        btn.TextTruncate = Enum.TextTruncate.AtEnd
         btn.Parent = row
-        setButtonBaseColor(btn, Theme.Card)
+        setButtonBaseColor(btn, Theme.Panel)
         corner(btn, BTN_RADIUS)
-        stroke(btn, Theme.Stroke, 0.70, 1.5)
-
-        trackConn(btn.MouseEnter:Connect(function()
-            tween(btn, 0.08, { BackgroundColor3 = Theme.CardHover }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(btn.MouseLeave:Connect(function()
-            tween(btn, 0.08, { BackgroundColor3 = getButtonBaseColor(btn) }, Enum.EasingStyle.Quad)
-        end))
-        trackConn(btn.MouseButton1Click:Connect(function()
-            local mousePos = UserInputService:GetMouseLocation()
-            spawnRipple(btn, mousePos.X, mousePos.Y)
-        end))
+        stroke(btn, Theme.Stroke, 0.70, 1)
 
         local function submit()
             local val = box.Text
@@ -1882,7 +1584,7 @@ local function runUi(playerGui)
     end
 
     -- ═══════════════════════════════════════════════════════════════════
-    --  BUILT‑IN TABS
+    --  BUILT-IN TABS
     -- ═══════════════════════════════════════════════════════════════════
 
     local mainPage = createTab("Main", CONFIG.TAB_ICON_MAIN)
@@ -1890,7 +1592,7 @@ local function runUi(playerGui)
     createHeader(mainPage, "UI Settings", "UISettingsHeader")
 
     createSliderCard(
-        mainPage, "UI Scale", "Resize the hub window (80 – 120%)",
+        mainPage, "UI Scale", "Resize the hub window (80 - 120%)",
         80, 120, 100,
         function(value) uiScale.Scale = value / 100 end,
         "UIScale"
@@ -1902,7 +1604,7 @@ local function runUi(playerGui)
     local _, rejoinBtn = createActionCard(
         mainPage,
         "Rejoin Same Server",
-        "Rejoins this exact server using the current JobId.",
+        "Rejoins this exact server using current JobId.",
         "REJOIN",
         "RejoinSameServer"
     )
@@ -1952,12 +1654,12 @@ local function runUi(playerGui)
 
         createToggleCard(
             mainPage,
-            "Anti‑AFK",
-            ("Jump pulse every %d sec. Keeps you in‑game."):format(ANTI_AFK_INTERVAL),
+            "Anti-AFK",
+            ("Jump pulse every %d sec. Keeps you in-game."):format(ANTI_AFK_INTERVAL),
             false,
             function(enabled)
-                if enabled then startAntiAfk(); showToast("Anti‑AFK enabled")
-                else stopAntiAfk(); showToast("Anti‑AFK disabled") end
+                if enabled then startAntiAfk(); showToast("Anti-AFK enabled")
+                else stopAntiAfk(); showToast("Anti-AFK disabled") end
             end,
             "AntiAFK"
         )
@@ -1976,13 +1678,6 @@ local function runUi(playerGui)
         controls.Visible   = not on
         discordBtn.Visible = not on
         title.Visible      = not on
-        glowLine.Visible   = not on
-        topbar.Size        = on and UDim2.fromScale(1, 1) or UDim2.new(1, 0, 0, TOP_H)
-
-        local r = on and 14 or RADIUS
-        mainCorner.CornerRadius   = UDim.new(0, r)
-        topbarCorner.CornerRadius = UDim.new(0, r)
-        glowCorner.CornerRadius   = UDim.new(0, r)
 
         miniFrame.Visible = on
 
@@ -1991,15 +1686,15 @@ local function runUi(playerGui)
                 local vp = getViewport()
                 miniFrame.Position = offset(
                     math.floor((vp.X - MINI_SIZE.X) * 0.5),
-                    16
+                    20
                 )
             end
             miniFrame.BackgroundTransparency = 1
             miniFrame.Size = offset(MINI_SIZE.X * 0.8, MINI_SIZE.Y * 0.8)
             tween(miniFrame, 0.25, {
                 Size = offset(MINI_SIZE.X, MINI_SIZE.Y),
-                BackgroundTransparency = 0.15
-            }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+                BackgroundTransparency = 0.05
+            }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
         end
     end
 
@@ -2026,13 +1721,14 @@ local function runUi(playerGui)
         busy = false
     end
 
-    trackConn(minimizeBtn.MouseButton1Click:Connect(function() setMinimized(true) end))
-    trackConn(miniRestoreBtn.MouseButton1Click:Connect(function() setMinimized(false) end))
-
-    trackConn(closeBtn.MouseButton1Click:Connect(function()
+    local function closeUi()
         tween(main, 0.15, { Size = offset(WINDOW_SIZE.X, 0) }, Enum.EasingStyle.Quad)
         task.delay(0.18, function() disconnectAll(); gui:Destroy() end)
-    end))
+    end
+
+    trackConn(minimizeBtn.MouseButton1Click:Connect(function() setMinimized(true) end))
+    trackConn(miniRestoreBtn.MouseButton1Click:Connect(function() setMinimized(false) end))
+    trackConn(closeBtn.MouseButton1Click:Connect(closeUi))
 
     -- ── MINI FRAME DRAG ──────────────────────────────────────────────
     do
@@ -2112,18 +1808,18 @@ local function runUi(playerGui)
         )
         tween(main, 0.4, {
             Size = offset(WINDOW_SIZE.X, WINDOW_SIZE.Y)
-        }, Enum.EasingStyle.Back, Enum.EasingDirection.Out).Completed:Wait()
+        }, Enum.EasingStyle.Quart, Enum.EasingDirection.Out).Completed:Wait()
         task.defer(function() clampWindow(main, WINDOW_SIZE) end)
     end
 
     selectTab("Main")
 
     -- ═══════════════════════════════════════════════════════════════════
-    --  GLOBAL API – 100% identisch zur Original-Version
+    --  GLOBAL API (1ZU1 IDENTISCH)
     -- ═══════════════════════════════════════════════════════════════════
 
     getgenv().N0BD_UI = {
-        Version         = "8.2.0",
+        Version         = "8.2.0-macOS",
         Gui             = gui,
         Main            = main,
         Sidebar         = sidebar,
@@ -2218,7 +1914,7 @@ end
 task.defer(function()
     waitForCamera()
     local playerGui = waitForPlayerGui()
-    if not playerGui then warn("N0BD.HUB: PlayerGui not found"); return end
+    if not playerGui then warn("n0bd.hub: PlayerGui not found"); return end
     local ok, err = pcall(runUi, playerGui)
-    if not ok then warn("N0BD.HUB crashed:", err) end
+    if not ok then warn("n0bd.hub crashed:", err) end
 end)
