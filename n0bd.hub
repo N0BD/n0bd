@@ -26,7 +26,7 @@ local ScriptLinks = {
     {
         GameUrl = "https://www.roblox.com/games/8737899170/Pet-Simulator-99",
         Code = [[
-            loadstring(game:HttpGet("https://redstoneguard.xyz/apit/loader/n0bdPs99StairwayOfHeaven/init"))()
+            loadstring(game:HttpGet("https://redstoneguard.xyz/api/loader/n0bdPs99StairwayOfHeaven/init"))()
         ]]
     },
 -- Survive Zombie Arena
