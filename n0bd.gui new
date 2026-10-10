@@ -1801,7 +1801,7 @@ local function runUi(playerGui)
     -- ═══════════════════════════════════════════════════════════════════
 
     getgenv().N0BD_UI = {
-        Version         = "8.2.0-macOS",
+        Version         = "V3 Made by n0bd",
         Gui             = gui,
         Main            = main,
         Sidebar         = sidebar,
