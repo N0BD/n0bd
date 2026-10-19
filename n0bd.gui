@@ -3062,20 +3062,21 @@ local function runUi(playerGui)
         return list
     end
 
-    local DEFAULT_LABEL = "Default"
-    local function groupFromName(name) return name == DEFAULT_LABEL and "" or name end
+    S.DEFAULT_LABEL, S.UI_LABEL = "Default", "UI Settings"
+    local function groupFromName(name) return name == S.DEFAULT_LABEL and "" or name end
 
     function Ext.GetConfigGroupNames()
         local set, names = {}, {}
         for _, g in ipairs(S.activeGroups()) do set[g] = true end
         for g in pairs(S.groups) do set[g] = true end
-        for g in pairs(set) do names[#names + 1] = (g == "") and DEFAULT_LABEL or g end
+        for g in pairs(set) do names[#names + 1] = (g == "") and S.DEFAULT_LABEL or g end
         table.sort(names)
-        if #names == 0 then names[1] = DEFAULT_LABEL end
+        if #names == 0 then names[1] = S.DEFAULT_LABEL end
+        table.insert(names, 1, S.UI_LABEL)
         return names
     end
 
-    local function groupOff(g) return S.offNames[(g == "") and DEFAULT_LABEL or g] == true end
+    local function groupOff(g) return S.offNames[(g == "") and S.DEFAULT_LABEL or g] == true end
     function S.metaPath() return CONFIG_DIR .. "/Auto Save.json" end
 
     function S.saveMeta()
@@ -3161,7 +3162,8 @@ local function runUi(playerGui)
         ensureFolder(CONFIG_DIR)
         local saved, firstErr = {}, nil
         for _, n in ipairs(list or {}) do
-            local ok, res = S.saveGroup(groupFromName(n))
+            local ok, res
+            if n == S.UI_LABEL then ok, res = Ext.SaveUi() else ok, res = S.saveGroup(groupFromName(n)) end
             if ok then saved[#saved + 1] = n else firstErr = firstErr or res end
         end
         return #saved, saved, firstErr
@@ -3321,6 +3323,7 @@ local function runUi(playerGui)
         local delay = math.max(0.2, tonumber(opt("AutoSaveDelay", 1)) or 1)
         if o and scopeOf(o) == "ui" then
             if not (Ext.UiEnabled and Ext.UiReady) then return end
+            if not Ext.AutoSave or S.offNames[S.UI_LABEL] then return end
             S.uiDirty = true
             S.uiToken = S.uiToken + 1
             local mine = S.uiToken
