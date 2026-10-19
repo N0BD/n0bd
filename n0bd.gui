@@ -1,4 +1,4 @@
--- n0bd.hub v12.9
+-- n0bd.hub v13.0
 local CONFIG = {
     ICON_DISCORD      = "",
     FALLBACK_DISCORD  = "Discord",
@@ -2946,7 +2946,7 @@ local function runUi(playerGui)
 
     local CONFIG_DIR = cleanFolder(opt("ConfigFolder", "n0bd.hub"), "n0bd.hub")
     Ext.ConfigName = cleanName(opt("ConfigName", "default"), "default")
-    local S = { uiToken = 0, dirty = {}, uiDirty = false, hooks = {}, groups = {}, loaded = {}, group = nil }
+    local S = { uiToken = 0, dirty = {}, uiDirty = false, hooks = {}, groups = {}, loaded = {}, group = nil, offNames = {} }
     S.uiDir  = cleanFolder(opt("UiFolder", "n0bd.hub/Gui Settings"), "n0bd.hub/Gui Settings")
     S.uiFile = cleanName(opt("UiFileName", "Settings"), "Settings")
     Ext.UiEnabled  = opt("UiSettings", true) ~= false
@@ -3062,6 +3062,69 @@ local function runUi(playerGui)
         return list
     end
 
+    local DEFAULT_LABEL = "Default"
+    local function groupFromName(name) return name == DEFAULT_LABEL and "" or name end
+
+    function Ext.GetConfigGroupNames()
+        local set, names = {}, {}
+        for _, g in ipairs(S.activeGroups()) do set[g] = true end
+        for g in pairs(S.groups) do set[g] = true end
+        for g in pairs(set) do names[#names + 1] = (g == "") and DEFAULT_LABEL or g end
+        table.sort(names)
+        if #names == 0 then names[1] = DEFAULT_LABEL end
+        return names
+    end
+
+    local function groupOff(g) return S.offNames[(g == "") and DEFAULT_LABEL or g] == true end
+    function S.metaPath() return CONFIG_DIR .. "/Auto Save.json" end
+
+    function S.saveMeta()
+        if type(writefile) ~= "function" then return false end
+        ensureFolder(CONFIG_DIR)
+        local off = {}
+        for n in pairs(S.offNames) do off[#off + 1] = n end
+        table.sort(off)
+        local values = { AutoSave = Ext.AutoSave == true, Off = off }
+        return (pcall(writefile, S.metaPath(), Ext.GetConfigJSON(values)))
+    end
+
+    function S.loadMeta()
+        local values = S.readValuesAt(S.metaPath())
+        if type(values) ~= "table" then return false end
+        local was = Ext.Loading
+        Ext.Loading = true
+        if type(values.AutoSave) == "boolean" then
+            Ext.AutoSave = values.AutoSave
+            local t = getRegistered(nil, "ConfigAutoSave")
+            if t and t.Set then pcall(t.Set, values.AutoSave) end
+        end
+        if type(values.Off) == "table" then
+            S.offNames = {}
+            for _, n in ipairs(values.Off) do S.offNames[tostring(n)] = true end
+            local dd = getRegistered(nil, "AutoSaveGroups")
+            if dd and dd.SetSilent then pcall(dd.SetSilent, Ext.GetAutoSaveGroups()) end
+        end
+        Ext.Loading = was
+        return true
+    end
+
+    function Ext.SetAutoSaveGroups(list)
+        local on = {}
+        for _, n in ipairs(list or {}) do on[n] = true end
+        for _, n in ipairs(Ext.GetConfigGroupNames()) do
+            S.offNames[n] = (not on[n]) and true or nil
+        end
+        if not Ext.Loading then S.saveMeta() end
+    end
+
+    function Ext.GetAutoSaveGroups()
+        local out = {}
+        for _, n in ipairs(Ext.GetConfigGroupNames()) do
+            if not S.offNames[n] then out[#out + 1] = n end
+        end
+        return out
+    end
+
     function S.saveGroup(g, name)
         local path = S.groupPath(g, name)
         local values = Ext.ExportConfig("script", g)
@@ -3093,6 +3156,17 @@ local function runUi(playerGui)
         return true, firstPath
     end
 
+    function Ext.SaveConfigGroups(list)
+        if type(writefile) ~= "function" then return 0, {}, "writefile not available" end
+        ensureFolder(CONFIG_DIR)
+        local saved, firstErr = {}, nil
+        for _, n in ipairs(list or {}) do
+            local ok, res = S.saveGroup(groupFromName(n))
+            if ok then saved[#saved + 1] = n else firstErr = firstErr or res end
+        end
+        return #saved, saved, firstErr
+    end
+
     function Ext.LoadConfig(name)
         local anyOk, applied, lastErr = false, 0, nil
         for _, g in ipairs(S.allGroups()) do
@@ -3114,7 +3188,9 @@ local function runUi(playerGui)
         local g = (name == nil) and "" or cleanName(name, "")
         if g == "" then S.group = nil; return "" end
         S.group = g
+        local isNew = not S.groups[g]
         S.groups[g] = true
+        if isNew and Ext.OnGroupsChanged then pcall(Ext.OnGroupsChanged) end
         if Ext.Ready and not S.loaded[g] then
             local path = S.groupPath(g)
             local values = S.readValuesAt(path)
@@ -3210,7 +3286,10 @@ local function runUi(playerGui)
 
     local readyCbs, saveToken = {}, 0
 
-    function Ext.SetAutoSave(on) Ext.AutoSave = on and true or false end
+    function Ext.SetAutoSave(on)
+        Ext.AutoSave = on and true or false
+        if not Ext.Loading then S.saveMeta() end
+    end
     function Ext.GetAutoSave() return Ext.AutoSave end
 
     function Ext.FlushSave()
@@ -3230,7 +3309,7 @@ local function runUi(playerGui)
         for g in pairs(S.dirty) do groups[#groups + 1] = g end
         for _, g in ipairs(groups) do
             S.dirty[g] = nil
-            if S.saveGroup(g) then saved = true end
+            if not groupOff(g) and S.saveGroup(g) then saved = true end
         end
         return saved
     end
@@ -3251,6 +3330,7 @@ local function runUi(playerGui)
             return
         end
         if not (Ext.AutoSave and Ext.Ready) then return end
+        if groupOff(o and groupOf(o) or "") then return end
         S.dirty[o and groupOf(o) or ""] = true
         saveToken = saveToken + 1
         local mine = saveToken
@@ -3274,6 +3354,7 @@ local function runUi(playerGui)
             for _, g in ipairs(S.allGroups()) do
                 if S.removeFile(S.groupPath(g)) then removed = removed + 1 end
             end
+            if S.removeFile(S.metaPath()) then removed = removed + 1 end
             S.loaded = {}
             for _, fn in ipairs({ table.unpack(S.hooks) }) do
                 local ok, res = pcall(fn)
@@ -3290,6 +3371,7 @@ local function runUi(playerGui)
     function Ext.FinishLoad()
         if Ext.Ready then return false end
         if opt("AutoLoad", false) == true then
+            S.loadMeta()
             local ok, res = Ext.LoadConfig()
             if ok and opt("ShowLoadedToast", true) then showToast("Config loaded: " .. Ext.ConfigName, "success", 2.2) end
         elseif Ext.AutoSave then
@@ -3300,6 +3382,7 @@ local function runUi(playerGui)
             end
         end
         Ext.Ready = true
+        if Ext.OnGroupsChanged then pcall(Ext.OnGroupsChanged) end
         for _, fn in ipairs(readyCbs) do task.spawn(fn) end
         readyCbs = {}
         return true
@@ -4576,6 +4659,46 @@ local function runUi(playerGui)
         Ext.SetAutoSave(on)
     end, { Id = "ConfigAutoSave" }).NoSave = true
 
+    do
+        local autoDD, manualDD
+        local knownNames = {}
+        local function refreshGroupDropdowns()
+            if not (autoDD and manualDD) then return end
+            local names = Ext.GetConfigGroupNames()
+            local wantManual = {}
+            local manualSel = manualDD.GetMap()
+            for _, n in ipairs(names) do
+                if not knownNames[n] or manualSel[n] then wantManual[#wantManual + 1] = n end
+            end
+            autoDD.SetOptions(names)
+            manualDD.SetOptions(names)
+            autoDD.SetSilent(Ext.GetAutoSaveGroups())
+            manualDD.SetSilent(wantManual)
+            knownNames = {}
+            for _, n in ipairs(names) do knownNames[n] = true end
+        end
+        autoDD = Ext.AddMultiDropdown(mainPage, "Auto Save Configs", { "Default" }, { "Default" }, function(list)
+            Ext.SetAutoSaveGroups(list)
+        end, { Id = "AutoSaveGroups" })
+        autoDD.NoSave = true
+        manualDD = Ext.AddMultiDropdown(mainPage, "Configs To Save", { "Default" }, { "Default" }, function() end, { Id = "ManualSaveGroups" })
+        manualDD.NoSave = true
+        local _, saveBtn = createActionCard(mainPage, "Save Configs Now",
+            "Saves the configs picked in Configs To Save right away, whether Auto Save is on or not.", "SAVE", { Id = "SaveConfigsNow" })
+        trackConn(saveBtn.MouseButton1Click:Connect(function()
+            local count, saved, err = Ext.SaveConfigGroups(manualDD.Get())
+            if count > 0 then
+                showToast("Saved: " .. table.concat(saved, ", "), "success")
+            elseif err then
+                showToast("Could not save: " .. tostring(err), "error")
+            else
+                showToast("No config selected", "warning")
+            end
+        end))
+        Ext.OnGroupsChanged = refreshGroupDropdowns
+        refreshGroupDropdowns()
+    end
+
     createDivider(mainPage, "MainDivider1b")
     createHeader(mainPage, "Delete Settings", "DeleteHeader")
     do
@@ -4814,7 +4937,7 @@ local function runUi(playerGui)
     end
 
     getgenv().N0BD_UI = {
-        Version = "12.9.0",
+        Version = "13.0.0",
         Gui = gui, Main = main, Window = window, Sidebar = sidebar, Content = content,
         Theme = Theme, Pages = pages, Tabs = tabs, Components = Components,
         Buttons = Components.Buttons, Toggles = Components.Toggles, Sliders = Components.Sliders,
@@ -4933,6 +5056,8 @@ local function runUi(playerGui)
         U.SaveUi, U.LoadUi, U.DeleteSettings = Ext.SaveUi, Ext.LoadUi, Ext.DeleteSettings
         U.OnDeleteScriptSettings, U.GetSettingsPath, U.GetUiFolder = Ext.OnDeleteScriptSettings, Ext.GetSettingsPath, Ext.GetUiFolder
         U.SetConfigGroup, U.GetConfigGroup = Ext.SetConfigGroup, Ext.GetConfigGroup
+        U.SetAutoSaveGroups, U.GetAutoSaveGroups = Ext.SetAutoSaveGroups, Ext.GetAutoSaveGroups
+        U.SaveConfigGroups, U.GetConfigGroupNames = Ext.SaveConfigGroups, Ext.GetConfigGroupNames
         U.SetAutoSave, U.GetAutoSave = function(on)
             Ext.SetAutoSave(on)
             local t = getRegistered("Toggles", "ConfigAutoSave")
