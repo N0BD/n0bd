@@ -2970,7 +2970,7 @@ local function runUi(playerGui)
     function Ext.GetConfigFolder() return CONFIG_DIR end
 
     local function scopeOf(o) return o.Scope or "ui" end
-    local function groupOf(o) return o.Group or "" end
+    local function groupOf(o) return o.ConfigGroup or "" end
 
     function Ext.ExportConfig(scope, group)
         local out, seen = {}, {}
@@ -3191,9 +3191,9 @@ local function runUi(playerGui)
         lastRegister = os.clock()
         if type(object) == "table" and object.Scope == nil then
             object.Scope = Ext.BaseDone and "script" or "ui"
-            if object.Scope == "script" and S.group then object.Group = S.group end
+            if object.Scope == "script" and S.group then object.ConfigGroup = S.group end
         end
-        local cache = type(object) == "table" and S.loaded[object.Group or ""] or nil
+        local cache = type(object) == "table" and S.loaded[object.ConfigGroup or ""] or nil
         if not (cache and SAVE_KINDS[kind]) then return end
         local stored = cache.values[id]
         if stored == nil then return end
