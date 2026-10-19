@@ -1,4 +1,4 @@
--- n0bd.hub v12.7
+-- n0bd.hub v12.8
 local CONFIG = {
     ICON_DISCORD      = "",
     FALLBACK_DISCORD  = "Discord",
@@ -2868,7 +2868,7 @@ local function runUi(playerGui)
             id = componentId(id)
             if byId[id] then run(byId[id], ...) end
             run(anyList, id, ...)
-            if Ext.onChanged then Ext.onChanged() end
+            if Ext.onChanged then Ext.onChanged(id) end
         end
 
         local function wrapCb(fn, cbIdx, optIdx, titleIdx)
@@ -2946,6 +2946,12 @@ local function runUi(playerGui)
 
     local CONFIG_DIR = cleanFolder(opt("ConfigFolder", "n0bd.hub"), "n0bd.hub")
     Ext.ConfigName = cleanName(opt("ConfigName", "default"), "default")
+    local S = { uiToken = 0, scriptDirty = false, uiDirty = false, hooks = {} }
+    S.uiDir  = cleanFolder(opt("UiFolder", "n0bd.hub/Gui Settings"), "n0bd.hub/Gui Settings")
+    S.uiFile = cleanName(opt("UiFileName", "Settings"), "Settings")
+    Ext.UiEnabled  = opt("UiSettings", true) ~= false
+    Ext.UiReady    = false
+    Ext.BaseDone   = false
     Ext.AutoSave   = opt("AutoSave", false) == true
     Ext.Loading    = false
     Ext.Ready      = false
@@ -2964,10 +2970,12 @@ local function runUi(playerGui)
     end
     function Ext.GetConfigFolder() return CONFIG_DIR end
 
-    function Ext.ExportConfig()
+    local function scopeOf(o) return o.Scope or "ui" end
+
+    function Ext.ExportConfig(scope)
         local out, seen = {}, {}
         for id, o in pairs(Components.All) do
-            if SAVE_KINDS[o.Type] and not o.NoSave and not seen[o] then
+            if SAVE_KINDS[o.Type] and not o.NoSave and not seen[o] and (not scope or scopeOf(o) == scope) then
                 seen[o] = true
                 local getter = o.GetSave or o.Get
                 if getter then
@@ -2979,14 +2987,14 @@ local function runUi(playerGui)
         return out
     end
 
-    function Ext.ImportConfig(values)
+    function Ext.ImportConfig(values, scope)
         local applied = 0
         if type(values) ~= "table" then return 0 end
         local was = Ext.Loading
         Ext.Loading = true
         for id, v in pairs(values) do
             local o = getRegistered(nil, id)
-            if o and SAVE_KINDS[o.Type] and not o.NoSave then
+            if o and SAVE_KINDS[o.Type] and not o.NoSave and (not scope or scopeOf(o) == scope) then
                 local setter = o.SetSave or o.Set or o.Select
                 if setter and pcall(setter, v) then applied = applied + 1 end
             end
@@ -3007,19 +3015,19 @@ local function runUi(playerGui)
 
     local function cfgName(name) return cleanName(name or Ext.ConfigName, "default") end
     local function cfgPath(name) return CONFIG_DIR .. "/" .. cfgName(name) .. ".json" end
+    function S.uiPath() return S.uiDir .. "/" .. S.uiFile .. ".json" end
 
-    local function ensureFolder()
+    local function ensureFolder(dir)
         if type(makefolder) ~= "function" or type(isfolder) ~= "function" then return end
         local path = ""
-        for part in CONFIG_DIR:gmatch("[^/]+") do
+        for part in (dir or CONFIG_DIR):gmatch("[^/]+") do
             path = (path == "") and part or (path .. "/" .. part)
             if not isfolder(path) then pcall(makefolder, path) end
         end
     end
 
-    local function readValues(name)
+    function S.readValuesAt(path)
         if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil, "readfile not available" end
-        local path = cfgPath(name)
         if not isfile(path) then return nil, "config not found" end
         local ok, content = pcall(readfile, path)
         if not ok then return nil, tostring(content) end
@@ -3027,16 +3035,19 @@ local function runUi(playerGui)
         if not okJ or type(data) ~= "table" then return nil, "invalid JSON" end
         return data.Values or data, path
     end
+    local function readValues(name) return S.readValuesAt(cfgPath(name)) end
 
     function Ext.SaveConfig(name)
         if type(writefile) ~= "function" then return false, "writefile not available" end
-        ensureFolder()
+        ensureFolder(CONFIG_DIR)
         local path = cfgPath(name)
-        local values = Ext.ExportConfig()
-
+        local values = Ext.ExportConfig("script")
         if Ext.Loaded and Ext.LoadedKey == path then
             for k, v in pairs(Ext.Loaded) do
-                if values[k] == nil then values[k] = v end
+                if values[k] == nil then
+                    local o = getRegistered(nil, k)
+                    if not o or scopeOf(o) == "script" then values[k] = v end
+                end
             end
         end
         local ok, err = pcall(writefile, path, Ext.GetConfigJSON(values))
@@ -3049,7 +3060,28 @@ local function runUi(playerGui)
         local values, path = readValues(name)
         if not values then return false, path end
         Ext.Loaded, Ext.LoadedKey = values, path
-        return true, Ext.ImportConfig(values)
+        return true, Ext.ImportConfig(values, "script")
+    end
+
+    function Ext.SaveUi()
+        if type(writefile) ~= "function" then return false, "writefile not available" end
+        ensureFolder(S.uiDir)
+        local ok, err = pcall(writefile, S.uiPath(), Ext.GetConfigJSON(Ext.ExportConfig("ui")))
+        if not ok then return false, tostring(err) end
+        return true, S.uiPath()
+    end
+
+    function Ext.LoadUi()
+        local values, path = S.readValuesAt(S.uiPath())
+        if not values then return false, path end
+        return true, Ext.ImportConfig(values, "ui")
+    end
+
+    function Ext.GetUiFolder() return S.uiDir end
+
+    function Ext.GetSettingsPath(scope)
+        if tostring(scope):lower():find("^script") then return cfgPath() end
+        return S.uiPath()
     end
 
     function Ext.ListConfigs()
@@ -3058,7 +3090,9 @@ local function runUi(playerGui)
             local ok, files = pcall(listfiles, CONFIG_DIR)
             if ok and type(files) == "table" then
                 for _, f in ipairs(files) do
-                    local n = tostring(f):match("([^/\\]+)%.json$")
+                    local rel = tostring(f):gsub("\\", "/")
+                    if rel:sub(1, #CONFIG_DIR + 1) == CONFIG_DIR .. "/" then rel = rel:sub(#CONFIG_DIR + 2) end
+                    local n = rel:match("^([^/]+)%.json$")
                     if n then table.insert(names, n) end
                 end
             end
@@ -3067,14 +3101,19 @@ local function runUi(playerGui)
         return names
     end
 
+    function S.removeFile(path)
+        if type(delfile) ~= "function" or type(isfile) ~= "function" or not isfile(path) then return false end
+        return (pcall(delfile, path))
+    end
+
     function Ext.DeleteConfig(name)
-        if type(delfile) ~= "function" or type(isfile) ~= "function" or not isfile(cfgPath(name)) then return false end
-        return (pcall(delfile, cfgPath(name)))
+        return S.removeFile(cfgPath(name))
     end
 
     local lastRegister = os.clock()
     registerHook = function(kind, id, object)
         lastRegister = os.clock()
+        if type(object) == "table" and object.Scope == nil then object.Scope = Ext.BaseDone and "script" or "ui" end
         if not (Ext.Loaded and SAVE_KINDS[kind]) then return end
         local stored = Ext.Loaded[id]
         if stored == nil then return end
@@ -3096,17 +3135,61 @@ local function runUi(playerGui)
 
     function Ext.FlushSave()
         saveToken = saveToken + 1
-        if Ext.Ready and Ext.AutoSave then return Ext.SaveConfig() end
-        return false
+        S.uiToken = S.uiToken + 1
+        local saved = false
+        if S.uiDirty and Ext.UiEnabled and Ext.UiReady then S.uiDirty = false; saved = Ext.SaveUi() end
+        if S.scriptDirty and Ext.Ready and Ext.AutoSave then S.scriptDirty = false; saved = Ext.SaveConfig() or saved end
+        return saved
     end
 
-    function Ext.onChanged()
-        if not (Ext.AutoSave and Ext.Ready and not Ext.Loading) then return end
+    function Ext.onChanged(id)
+        if Ext.Loading then return end
+        local o = id and getRegistered(nil, id)
+        if o and o.NoSave then return end
+        local delay = math.max(0.2, tonumber(opt("AutoSaveDelay", 1)) or 1)
+        if o and scopeOf(o) == "ui" then
+            if not (Ext.UiEnabled and Ext.UiReady) then return end
+            S.uiDirty = true
+            S.uiToken = S.uiToken + 1
+            local mine = S.uiToken
+            task.delay(delay, function()
+                if mine == S.uiToken and S.uiDirty then S.uiDirty = false; Ext.SaveUi() end
+            end)
+            return
+        end
+        if not (Ext.AutoSave and Ext.Ready) then return end
+        S.scriptDirty = true
         saveToken = saveToken + 1
         local mine = saveToken
-        task.delay(math.max(0.2, tonumber(opt("AutoSaveDelay", 1)) or 1), function()
-            if mine == saveToken and Ext.AutoSave and Ext.Ready then Ext.SaveConfig() end
+        task.delay(delay, function()
+            if mine == saveToken and S.scriptDirty and Ext.AutoSave and Ext.Ready then S.scriptDirty = false; Ext.SaveConfig() end
         end)
+    end
+
+    function Ext.OnDeleteScriptSettings(fn)
+        if type(fn) == "function" then table.insert(S.hooks, fn) end
+    end
+
+    function Ext.DeleteSettings(scope)
+        scope = tostring(scope or ""):lower()
+        local removed = 0
+        if scope:find("^ui") or scope:find("^gui") then
+            S.uiToken, S.uiDirty = S.uiToken + 1, false
+            if S.removeFile(S.uiPath()) then removed = 1 end
+        elseif scope:find("^script") then
+            saveToken, S.scriptDirty = saveToken + 1, false
+            if S.removeFile(cfgPath()) then removed = 1 end
+            Ext.Loaded, Ext.LoadedKey = nil, nil
+            for _, fn in ipairs({ table.unpack(S.hooks) }) do
+                local ok, res = pcall(fn)
+                if ok then
+                    if type(res) == "number" then removed = removed + res elseif res == true then removed = removed + 1 end
+                end
+            end
+        else
+            return false, 0
+        end
+        return removed > 0, removed
     end
 
     function Ext.FinishLoad()
@@ -4390,14 +4473,14 @@ local function runUi(playerGui)
     end
 
     createDivider(mainPage, "MainDivider1")
-    createHeader(mainPage, "Config", "ConfigHeader")
+    createHeader(mainPage, "Script Settings", "ConfigHeader")
     do
         local nameInput = createTextInputCard(mainPage, "Config Name", "default", "SET", function(v)
             Ext.SetConfigName(v)
         end, { Id = "ConfigName" })
         nameInput.NoSave = true
         nameInput.TextBox.Text = Ext.ConfigName
-        createToggleCard(mainPage, "Auto Save", "Saves your settings automatically a moment after every change.", Ext.AutoSave, function(on)
+        createToggleCard(mainPage, "Auto Save", "Saves the script settings automatically a moment after every change.", Ext.AutoSave, function(on)
             Ext.SetAutoSave(on)
         end, { Id = "ConfigAutoSave" }).NoSave = true
         local function report(ok, okMsg, failMsg)
@@ -4418,6 +4501,46 @@ local function runUi(playerGui)
                 report(ok, "Config copied!", "Clipboard not available")
             end },
         }, { Id = "ConfigButtons" })
+    end
+
+    createDivider(mainPage, "MainDivider1b")
+    createHeader(mainPage, "Delete Settings", "DeleteHeader")
+    do
+        local TARGETS = { "UI Settings", "Script Settings" }
+        local target = TARGETS[1]
+        local armed, armToken = false, 0
+        local descText = function() return Ext.GetSettingsPath(target) end
+        local disarm
+        local dd = createDropdownCard(mainPage, "Settings Type", TARGETS, target, function(v)
+            target = v
+            if disarm then disarm() end
+        end, { Id = "DeleteTarget" })
+        dd.NoSave = true
+        local _, btn = createActionCard(mainPage, "Delete Settings", "", "DELETE", { Id = "DeleteSettings" })
+        local action = getRegistered("Buttons", "DeleteSettings")
+        action.Description.Text = descText()
+        disarm = function()
+            armed = false
+            armToken = armToken + 1
+            btn.Text = "DELETE"
+            action.Description.Text = descText()
+        end
+        trackConn(btn.MouseButton1Click:Connect(function()
+            if not armed then
+                armed = true
+                armToken = armToken + 1
+                local mine = armToken
+                btn.Text = "CONFIRM"
+                action.Description.Text = "Click again to delete " .. target
+                task.delay(3, function() if armed and mine == armToken then disarm() end end)
+                return
+            end
+            local name = target
+            disarm()
+            local ok = Ext.DeleteSettings(name)
+            showToast(ok and (name .. " deleted") or ("No " .. name .. " found"), ok and "success" or "warning")
+        end))
+        Ext.Configure("DeleteSettings", { Style = "danger" })
     end
 
     createDivider(mainPage, "MainDivider2")
@@ -4618,7 +4741,7 @@ local function runUi(playerGui)
     end
 
     getgenv().N0BD_UI = {
-        Version = "12.7.0",
+        Version = "12.8.0",
         Gui = gui, Main = main, Window = window, Sidebar = sidebar, Content = content,
         Theme = Theme, Pages = pages, Tabs = tabs, Components = Components,
         Buttons = Components.Buttons, Toggles = Components.Toggles, Sliders = Components.Sliders,
@@ -4734,6 +4857,8 @@ local function runUi(playerGui)
         U.GetConfigJSON, U.LoadConfigJSON = Ext.GetConfigJSON, Ext.LoadConfigJSON
         U.SaveConfig, U.LoadConfig = Ext.SaveConfig, Ext.LoadConfig
         U.ListConfigs, U.DeleteConfig = Ext.ListConfigs, Ext.DeleteConfig
+        U.SaveUi, U.LoadUi, U.DeleteSettings = Ext.SaveUi, Ext.LoadUi, Ext.DeleteSettings
+        U.OnDeleteScriptSettings, U.GetSettingsPath, U.GetUiFolder = Ext.OnDeleteScriptSettings, Ext.GetSettingsPath, Ext.GetUiFolder
         U.SetAutoSave, U.GetAutoSave = function(on)
             Ext.SetAutoSave(on)
             local t = getRegistered("Toggles", "ConfigAutoSave")
@@ -4744,6 +4869,7 @@ local function runUi(playerGui)
             local copy = {}
             for k, v in pairs(USER_CFG) do copy[k] = v end
             copy.Title, copy.ConfigName, copy.ConfigFolder, copy.AutoSave = CONFIG.TITLE, Ext.ConfigName, Ext.GetConfigFolder(), Ext.AutoSave
+            copy.UiFolder = Ext.GetUiFolder()
             return copy
         end
         U.SetConfigName, U.GetConfigName = Ext.SetConfigName, Ext.GetConfigName
@@ -4788,6 +4914,10 @@ local function runUi(playerGui)
 
     getgenv().N0BD_Cleanup = destroyAll
     getgenv().N0BD_Toast = showToast
+
+    Ext.BaseDone = true
+    if Ext.UiEnabled then pcall(Ext.LoadUi) end
+    Ext.UiReady = true
 
     applyScale(false)
     window.GroupTransparency = 1
