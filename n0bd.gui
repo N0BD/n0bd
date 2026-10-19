@@ -4473,35 +4473,10 @@ local function runUi(playerGui)
     end
 
     createDivider(mainPage, "MainDivider1")
-    createHeader(mainPage, "Script Settings", "ConfigHeader")
-    do
-        local nameInput = createTextInputCard(mainPage, "Config Name", "default", "SET", function(v)
-            Ext.SetConfigName(v)
-        end, { Id = "ConfigName" })
-        nameInput.NoSave = true
-        nameInput.TextBox.Text = Ext.ConfigName
-        createToggleCard(mainPage, "Auto Save", "Saves the script settings automatically a moment after every change.", Ext.AutoSave, function(on)
-            Ext.SetAutoSave(on)
-        end, { Id = "ConfigAutoSave" }).NoSave = true
-        local function report(ok, okMsg, failMsg)
-            showToast(ok and okMsg or failMsg, ok and "success" or "error")
-        end
-        Ext.AddButtonRow(mainPage, {
-            { Text = "SAVE", Style = "success", Id = "ConfigSave", Callback = function()
-                local ok, res = Ext.SaveConfig()
-                report(ok, "Config saved: " .. Ext.ConfigName, "Save failed: " .. tostring(res))
-            end },
-            { Text = "LOAD", Id = "ConfigLoad", Callback = function()
-                local ok, res = Ext.LoadConfig()
-                report(ok, "Config loaded: " .. Ext.ConfigName .. " (" .. tostring(res) .. " values)", "Load failed: " .. tostring(res))
-            end },
-            { Text = "COPY JSON", Style = "ghost", Id = "ConfigCopy", Callback = function()
-                local copier = setclipboard or toclipboard
-                local ok = copier and pcall(copier, Ext.GetConfigJSON()) and true or false
-                report(ok, "Config copied!", "Clipboard not available")
-            end },
-        }, { Id = "ConfigButtons" })
-    end
+    createHeader(mainPage, "Settings", "ConfigHeader")
+    createToggleCard(mainPage, "Auto Save", "Saves the script settings automatically a moment after every change.", Ext.AutoSave, function(on)
+        Ext.SetAutoSave(on)
+    end, { Id = "ConfigAutoSave" }).NoSave = true
 
     createDivider(mainPage, "MainDivider1b")
     createHeader(mainPage, "Delete Settings", "DeleteHeader")
