@@ -1,4 +1,4 @@
--- n0bd.hub v12.6
+-- n0bd.hub v12.7
 local CONFIG = {
     ICON_DISCORD      = "",
     FALLBACK_DISCORD  = "Discord",
@@ -2610,8 +2610,10 @@ local function runUi(playerGui)
     local function createSearchListCard(page, title, items, callback, options)
         local opts = readOptions(options, title)
         title = tostring(title or "")
-        local itemsArr = {}
-        for i, v in ipairs(items or {}) do itemsArr[i] = v end
+        local itemsArr, itemsLower = {}, {}
+        for i, v in ipairs(items or {}) do itemsArr[i] = v; itemsLower[i] = string.lower(tostring(v)) end
+        local rowConns = {}
+        local MAX_ROWS = math.max(10, tonumber(opts.MaxRows) or 60)
 
         local slot, card, _, ctl = cardBase(page, (title:gsub("%s+", "")) .. "SearchListCard", 60)
 
@@ -2651,7 +2653,8 @@ local function runUi(playerGui)
         closePopup = function()
             unregisterPopup(closePopup)
             for _, c in ipairs(conns or {}) do pcall(function() c:Disconnect() end) end
-            conns = nil
+            for _, c in ipairs(rowConns) do pcall(function() c:Disconnect() end) end
+            conns, rowConns = nil, {}
             if searchBox then pendingSearch = searchBox.Text end
             if popup then
                 local p = popup
@@ -2671,10 +2674,28 @@ local function runUi(playerGui)
         end
 
         local function applyFilter()
-            if not searchBox then return end
+            if not searchBox or not listScroll then return end
             local q = string.lower(tostring(searchBox.Text or ""))
-            for _, r in ipairs(rows) do
-                r.btn.Visible = (q == "" or string.find(string.lower(tostring(r.item)), q, 1, true) ~= nil)
+            for _, c in ipairs(rowConns) do pcall(function() c:Disconnect() end) end
+            rowConns = {}
+            for _, r in ipairs(rows) do r.btn:Destroy() end
+            rows = {}
+            local shown = 0
+            for i, item in ipairs(itemsArr) do
+                if q == "" or string.find(itemsLower[i], q, 1, true) then
+                    shown = shown + 1
+                    if shown > MAX_ROWS then break end
+                    local row = makeRow(listScroll, item, item == selectedValue, shown, ROW_H)
+                    rows[shown] = { item = item, btn = row }
+                    local function pick()
+                        if not popup then return end
+                        setSelected(item)
+                        closePopup()
+                        if callback then task.spawn(callback, item) end
+                    end
+                    table.insert(rowConns, row.MouseButton1Click:Connect(pick))
+                    table.insert(rowConns, row.Activated:Connect(pick))
+                end
             end
             local listH, totalH = currentHeight()
             if listScroll then listScroll.Size = UDim2.new(1, 0, 0, listH) end
@@ -2738,18 +2759,6 @@ local function runUi(playerGui)
 
             conns = {}
             rows = {}
-            for i, item in ipairs(itemsArr) do
-                local row = makeRow(listScroll, item, item == selectedValue, i, ROW_H)
-                rows[i] = { item = item, btn = row }
-                local function pick()
-                    if not popup then return end
-                    setSelected(item)
-                    closePopup()
-                    if callback then task.spawn(callback, item) end
-                end
-                table.insert(conns, row.MouseButton1Click:Connect(pick))
-                table.insert(conns, row.Activated:Connect(pick))
-            end
 
             table.insert(conns, searchBox:GetPropertyChangedSignal("Text"):Connect(applyFilter))
             table.insert(conns, searchBox.Focused:Connect(function() tween(scStroke, 0.15, { Color = Theme.Accent, Transparency = 0.1 }) end))
@@ -2792,8 +2801,8 @@ local function runUi(playerGui)
             end,
             Close = closePopup,
             SetItems = function(newItems)
-                itemsArr = {}
-                for i, v in ipairs(newItems or {}) do itemsArr[i] = v end
+                itemsArr, itemsLower = {}, {}
+                for i, v in ipairs(newItems or {}) do itemsArr[i] = v; itemsLower[i] = string.lower(tostring(v)) end
                 if popup then closePopup() end
                 if selectedValue ~= nil and not hasItem(selectedValue) then
                     selectedValue = nil
@@ -4609,7 +4618,7 @@ local function runUi(playerGui)
     end
 
     getgenv().N0BD_UI = {
-        Version = "12.6.0",
+        Version = "12.7.0",
         Gui = gui, Main = main, Window = window, Sidebar = sidebar, Content = content,
         Theme = Theme, Pages = pages, Tabs = tabs, Components = Components,
         Buttons = Components.Buttons, Toggles = Components.Toggles, Sliders = Components.Sliders,
