@@ -175,6 +175,49 @@ local function runUi(playerGui)
         return Vector2.new(1920, 1080)
     end
 
+    local Mob = {}
+
+    function Mob.touch()
+        local ok, v = pcall(function()
+            return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+        end)
+        return ok and v and true or false
+    end
+
+    function Mob.kbTop()
+        local ok, vis = pcall(function() return UserInputService.OnScreenKeyboardVisible end)
+        if not ok or not vis then return nil end
+        local vp = getViewport()
+        local okP, pos = pcall(function() return UserInputService.OnScreenKeyboardPosition end)
+        local okS, siz = pcall(function() return UserInputService.OnScreenKeyboardSize end)
+        local top = okP and pos and pos.Y or 0
+        if not (top > vp.Y * 0.2 and top < vp.Y) then
+            local h = okS and siz and siz.Y or 0
+            if h <= 0 then h = vp.Y * 0.5 end
+            top = vp.Y - h
+        end
+        return top
+    end
+
+    function Mob.bottom()
+        return Mob.kbTop() or getViewport().Y
+    end
+
+    function Mob.window()
+        local vp = getViewport()
+        local minS = Mob.touch() and 0.9 or 0.85
+        local w = math.clamp((vp.X - 16) / minS, 520, 900)
+        local h = math.clamp((vp.Y - 16) / minS, 300, 600)
+        return Vector2.new(math.floor(w), math.floor(h)), (w < 680) and 132 or 200
+    end
+
+    function Mob.lockScroll(obj, locked)
+        local sf = obj and obj:FindFirstAncestorOfClass("ScrollingFrame")
+        if sf then pcall(function() sf.ScrollingEnabled = not locked end) end
+    end
+
+    WINDOW_SIZE, SIDEBAR_W = Mob.window()
+
     local function safeNumber(value, fallback)
         value = tonumber(value)
         if not value or value ~= value or value == math.huge or value == -math.huge then
@@ -858,6 +901,48 @@ local function runUi(playerGui)
 
     local function effScale() return userScale * autoScale() end
 
+    function Mob.reveal(box)
+        if not box or not box.Parent then return end
+        local kb = Mob.kbTop()
+        if not kb then return end
+        local limit = kb - 12
+        local bottom = box.AbsolutePosition.Y + box.AbsoluteSize.Y
+        if bottom <= limit then return end
+        local s = effScale()
+        local sf = box:FindFirstAncestorOfClass("ScrollingFrame")
+        if sf then
+            local maxY = math.max(0, (sf.AbsoluteCanvasSize.Y - sf.AbsoluteWindowSize.Y) / s)
+            local want = sf.CanvasPosition.Y + (bottom - limit) / s
+            sf.CanvasPosition = Vector2.new(sf.CanvasPosition.X, math.min(maxY, want))
+            bottom = box.AbsolutePosition.Y + box.AbsoluteSize.Y
+        end
+        if bottom > limit and main and main.Parent then
+            local lift = bottom - limit
+            local top = box.AbsolutePosition.Y - lift
+            if top < 8 then lift = math.max(0, box.AbsolutePosition.Y - 8) end
+            if not Mob.liftBase then Mob.liftBase = main.Position end
+            main.Position = UDim2.fromOffset(main.Position.X.Offset, math.floor(Mob.liftBase.Y.Offset - lift))
+        end
+    end
+
+    function Mob.unlift()
+        if Mob.liftBase and main and main.Parent then
+            main.Position = Mob.liftBase
+            Mob.liftBase = nil
+        end
+    end
+
+    function Mob.hookBox(box)
+        if not box then return end
+        trackConn(box.Focused:Connect(function()
+            task.delay(0.4, function() Mob.reveal(box) end)
+            task.delay(0.9, function() Mob.reveal(box) end)
+        end))
+        trackConn(box.FocusLost:Connect(function()
+            task.delay(0.15, Mob.unlift)
+        end))
+    end
+
     local function clampWindow()
         local vp = getViewport()
         local s  = effScale()
@@ -870,6 +955,7 @@ local function runUi(playerGui)
     end
 
     local function applyScale(animate)
+        if Mob.refit then Mob.refit() end
         Canvas.sync(effScale())
         if animate then
             tween(mainScale, 0.25, { Scale = effScale() })
@@ -939,7 +1025,7 @@ local function runUi(playerGui)
         else bar(0, 8); bar(90, 8) end
 
         local hit = newT("TextButton", {
-            Size = UDim2.new(1, 8, 1, 8), Position = UDim2.fromOffset(-4, -4), BackgroundTransparency = 1,
+            Size = UDim2.new(1, 8, 1, 20), Position = UDim2.fromOffset(-4, -10), BackgroundTransparency = 1,
             Text = "", AutoButtonColor = false, ZIndex = 5, Parent = wrapper,
         })
 
@@ -1312,6 +1398,18 @@ local function runUi(playerGui)
     })
     corner(content, 14)
     stroke(content, WHITE, 0.92, 1)
+
+    function Mob.refit()
+        local w, sw = Mob.window()
+        WINDOW_SIZE, SIDEBAR_W = w, sw
+        main.Size = UDim2.fromOffset(w.X, w.Y)
+        sidebar.Size = UDim2.new(0, sw, 1, -(MARGIN * 2))
+        content.Position = UDim2.fromOffset(MARGIN + sw + GAP, MARGIN)
+        content.Size = UDim2.new(1, -(MARGIN + sw + GAP + MARGIN), 1, -(MARGIN * 2))
+        local chip = controls:FindFirstChild("Stats")
+        if chip then chip.Visible = w.X >= 720 end
+    end
+    Mob.refit()
 
     local crumb, pageTitle
     do
@@ -2121,6 +2219,7 @@ local function runUi(playerGui)
         trackConn(hitbox.InputBegan:Connect(function(input)
             if isPointerStart(input) then
                 dragging = true
+                Mob.lockScroll(card, true)
                 tween(knobScale, 0.15, { Scale = 1.25 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
                 tween(knobStroke, 0.15, { Thickness = 4, Transparency = 0.5 })
                 setFromX(screenPos(input).X)
@@ -2132,6 +2231,7 @@ local function runUi(playerGui)
         trackConn(UserInputService.InputEnded:Connect(function(input)
             if dragging and isPointerStart(input) then
                 dragging = false
+                Mob.lockScroll(card, false)
                 tween(knobScale, 0.25, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
                 tween(knobStroke, 0.2, { Thickness = 2, Transparency = 0.15 })
             end
@@ -2197,17 +2297,18 @@ local function runUi(playerGui)
         local vp = getViewport()
         local s  = effScale()
         local w, h = popupW * s, popupH * s
+        local floorY = Mob.bottom()
         local right = absPos.X + absSize.X
         if right - w < 8 then right = 8 + w end
         if right > vp.X - 8 then right = vp.X - 8 end
         local y, anchorY = absPos.Y + absSize.Y + 6 * s, 0
-        if y + h > vp.Y - 8 then
+        if y + h > floorY - 8 then
             local above = absPos.Y - 6 * s
             if above - h >= 8 then
                 y, anchorY = above, 1
             else
 
-                y, anchorY = math.max(8, vp.Y - 8 - h), 0
+                y, anchorY = math.max(8, floorY - 8 - h), 0
             end
         end
         return right, y, anchorY
@@ -2410,7 +2511,7 @@ local function runUi(playerGui)
         trackConn(valueBtn.MouseEnter:Connect(function() tween(valueBtn, 0.12, { BackgroundColor3 = Theme.InputBgHover }) end))
         trackConn(valueBtn.MouseLeave:Connect(function() tween(valueBtn, 0.18, { BackgroundColor3 = Theme.InputBg }) end))
 
-        local POPUP_W, ROW_H, MAX_ROWS = 220, 34, 6
+        local POPUP_W, ROW_H, MAX_ROWS = 220, Mob.touch() and 42 or 34, 6
         local popup, conns, closePopup
 
         closePopup = function()
@@ -2430,7 +2531,8 @@ local function runUi(playerGui)
             closeAllDropdowns(closePopup)
             if popup then return end
 
-            local count  = math.min(#options, MAX_ROWS)
+            local fitRows = math.floor((getViewport().Y / effScale() - 70 - POPUP_HEADER - 12) / (ROW_H + 3))
+            local count  = math.min(#options, math.max(3, math.min(MAX_ROWS, fitRows)))
             local listH  = count * (ROW_H + 3) + 12
             local popupH = POPUP_HEADER + listH
             local px, py, anchorY = popupPlacement(valueBtn, POPUP_W, popupH)
@@ -2570,6 +2672,7 @@ local function runUi(playerGui)
             AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(88, 28),
         })
 
+        Mob.hookBox(box)
         trackConn(box.Focused:Connect(function()
             tween(containerStroke, 0.18, { Color = Theme.Accent, Transparency = 0.1 })
             tween(container, 0.18, { BackgroundColor3 = Theme.InputBgHover })
@@ -2637,11 +2740,12 @@ local function runUi(playerGui)
         trackConn(valueBtn.MouseLeave:Connect(function() tween(valueBtn, 0.18, { BackgroundColor3 = Theme.InputBg }) end))
 
         local selectedValue, pendingSearch = nil, ""
+        local kbShown, kbSeen = false, 0
         local popup, conns, closePopup
         local searchBox, listScroll, emptyLabel
         local rows = {}
 
-        local POPUP_W, ROW_H, MAX_LIST_H = 236, 32, 210
+        local POPUP_W, ROW_H, MAX_LIST_H = 236, Mob.touch() and 42 or 32, 210
         local SEARCH_Y, LIST_Y = POPUP_HEADER + 4, POPUP_HEADER + 46
 
         local function setSelected(item)
@@ -2666,10 +2770,16 @@ local function runUi(playerGui)
             tween(valueStroke, 0.2, { Color = Theme.Stroke, Transparency = 0.45 })
         end
 
+        local function listCap()
+            local kb = Mob.kbTop()
+            if not kb then return MAX_LIST_H end
+            return math.clamp(math.floor((kb - 20) / effScale()) - LIST_Y, 56, MAX_LIST_H)
+        end
+
         local function currentHeight()
             local visible = 0
             for _, r in ipairs(rows) do if r.btn.Visible then visible = visible + 1 end end
-            local listH = math.clamp(visible * (ROW_H + 3) + 12, 52, MAX_LIST_H)
+            local listH = math.clamp(visible * (ROW_H + 3) + 12, 52, listCap())
             return listH, LIST_Y + listH
         end
 
@@ -2711,7 +2821,7 @@ local function runUi(playerGui)
             closeAllDropdowns(closePopup)
             if popup then return end
 
-            local totalH = LIST_Y + math.clamp(#itemsArr * (ROW_H + 3) + 12, 52, MAX_LIST_H)
+            local totalH = LIST_Y + math.clamp(#itemsArr * (ROW_H + 3) + 12, 52, listCap())
             local px, py, anchorY = popupPlacement(valueBtn, POPUP_W, totalH)
 
             popup = createPopup(POPUP_W, totalH, title, function() closePopup() end)
@@ -2722,6 +2832,10 @@ local function runUi(playerGui)
                 Size = UDim2.new(1, -20, 0, 34), Position = UDim2.fromOffset(10, SEARCH_Y), Parent = popup.Body,
             })
             corner(sc, 10)
+            local scHit = newT("TextButton", {
+                Name = "SearchHit", AutoButtonColor = false, BackgroundTransparency = 1, Text = "",
+                Size = UDim2.fromScale(1, 1), ZIndex = 2, Parent = sc,
+            })
             local scStroke = newT("UIStroke", {
                 Color = Theme.Stroke, Transparency = 0.4, Thickness = 1,
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = sc,
@@ -2760,6 +2874,9 @@ local function runUi(playerGui)
             conns = {}
             rows = {}
 
+            table.insert(conns, scHit.Activated:Connect(function()
+                if searchBox then searchBox:CaptureFocus() end
+            end))
             table.insert(conns, searchBox:GetPropertyChangedSignal("Text"):Connect(applyFilter))
             table.insert(conns, searchBox.Focused:Connect(function() tween(scStroke, 0.15, { Color = Theme.Accent, Transparency = 0.1 }) end))
             table.insert(conns, searchBox.FocusLost:Connect(function() tween(scStroke, 0.2, { Color = Theme.Stroke, Transparency = 0.4 }) end))
@@ -2776,6 +2893,14 @@ local function runUi(playerGui)
                 end
                 local center = valueBtn.AbsolutePosition + valueBtn.AbsoluteSize / 2
                 if not isInside(center, page.Page) then closePopup() return end
+                local kb = Mob.kbTop()
+                if kb then
+                    kbSeen = os.clock()
+                    if kbShown ~= true then kbShown = true; applyFilter() end
+                elseif kbShown and os.clock() - kbSeen > 0.4 then
+                    kbShown = false
+                    applyFilter()
+                end
                 popup.Place(popupPlacement(valueBtn, POPUP_W, popup.H))
             end))
         end
@@ -3753,7 +3878,7 @@ local function runUi(playerGui)
         end
         refreshText()
 
-        local POPUP_W, ROW_H, MAX_ROWS = 220, 34, 6
+        local POPUP_W, ROW_H, MAX_ROWS = 220, Mob.touch() and 42 or 34, 6
         local popup, conns, closePopup
         local rowApis = {}
         local obj
@@ -3784,7 +3909,8 @@ local function runUi(playerGui)
         local function openPopup()
             closeAllDropdowns(closePopup)
             if popup then return end
-            local count  = math.min(#items, MAX_ROWS)
+            local fitRows = math.floor((getViewport().Y / effScale() - 70 - POPUP_HEADER - 12) / (ROW_H + 3))
+            local count  = math.min(#items, math.max(3, math.min(MAX_ROWS, fitRows)))
             local listH  = count * (ROW_H + 3) + 12
             local popupH = POPUP_HEADER + listH
             local px, py, anchorY = popupPlacement(valueBtn, POPUP_W, popupH)
@@ -3795,7 +3921,7 @@ local function runUi(playerGui)
             local function headerBtn(text, x)
                 local b = newT("TextButton", {
                     AutoButtonColor = false, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4,
-                    Position = UDim2.new(1, x, 0, 6), Size = UDim2.fromOffset(34, 20), Font = Enum.Font.GothamBold,
+                    Position = UDim2.new(1, x, 0, Mob.touch() and 2 or 6), Size = UDim2.fromOffset(34, Mob.touch() and 28 or 20), Font = Enum.Font.GothamBold,
                     TextSize = 11, TextColor3 = Theme.Accent, Text = text, Parent = popup.Body,
                 })
                 return b
@@ -4940,7 +5066,7 @@ local function runUi(playerGui)
     end
 
     getgenv().N0BD_UI = {
-        Version = "13.0.0",
+        Version = "13.1.0",
         Gui = gui, Main = main, Window = window, Sidebar = sidebar, Content = content,
         Theme = Theme, Pages = pages, Tabs = tabs, Components = Components,
         Buttons = Components.Buttons, Toggles = Components.Toggles, Sliders = Components.Sliders,
