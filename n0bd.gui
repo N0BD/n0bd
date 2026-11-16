@@ -1,4 +1,4 @@
--- n0bd.hub v4
+-- n0bd.hub v13.0
 local CONFIG = {
     ICON_DISCORD      = "",
     FALLBACK_DISCORD  = "Discord",
@@ -861,14 +861,14 @@ local function runUi(playerGui)
 
     local shadows, setShadows = {}, nil
     do
-    local SHADOW_BASE = 0.94
-    for i = 1, 9 do
+    local SHADOW_BASE = 0.955
+    for i = 1, 4 do
         local s = newT("Frame", {
-            Name = "Shadow", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 22),
-            Size = UDim2.new(1, i * 8 - 14, 1, i * 9 - 10), BackgroundColor3 = BLACK,
+            Name = "Shadow", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 6),
+            Size = UDim2.new(1, i * 5 - 2, 1, i * 5 - 2), BackgroundColor3 = BLACK,
             BackgroundTransparency = SHADOW_BASE, BorderSizePixel = 0, ZIndex = 1, Parent = main,
         })
-        corner(s, RADIUS + i * 4)
+        corner(s, RADIUS + i * 2)
         shadows[i] = s
     end
     setShadows = function(visible, t)
