@@ -3059,7 +3059,11 @@ local function runUi(playerGui)
         local list = {
             Get = function() return selectedValue end,
             Select = function(v)
-                if hasItem(v) then setSelected(v); if popup then closePopup() end end
+                if hasItem(v) then
+                    setSelected(v)
+                    if popup then closePopup() end
+                    if callback then task.spawn(callback, v) end
+                end
             end,
             Clear = function()
                 selectedValue = nil
@@ -4051,10 +4055,12 @@ local function runUi(playerGui)
         local function openPopup()
             closeAllDropdowns(closePopup)
             if popup then return end
-            local fitRows = math.floor((getViewport().Y / effScale() - 70 - POPUP_HEADER - 12) / (ROW_H + 3))
+            local searchable = #items > 10
+            local searchH = searchable and 42 or 0
+            local fitRows = math.floor((getViewport().Y / effScale() - 70 - POPUP_HEADER - searchH - 12) / (ROW_H + 3))
             local count  = math.min(#items, math.max(3, math.min(MAX_ROWS, fitRows)))
             local listH  = count * (ROW_H + 3) + 12
-            local popupH = POPUP_HEADER + listH
+            local popupH = POPUP_HEADER + searchH + listH
             local px, py, anchorY = popupPlacement(valueBtn, POPUP_W, popupH)
             popup = createPopup(POPUP_W, popupH, titleText, function() closePopup() end)
             popup.Place(px, py, anchorY)
@@ -4072,14 +4078,49 @@ local function runUi(playerGui)
             table.insert(conns, allBtn.MouseButton1Click:Connect(function() obj.SelectAll() end))
             table.insert(conns, noneBtn.MouseButton1Click:Connect(function() obj.Clear() end))
 
-            local listFrame = makeListScroll(popup, POPUP_HEADER, listH)
-            for i, opt in ipairs(items) do
-                local row, api = makeRow(listFrame, opt, selected[opt], i, ROW_H, true)
-                rowApis[opt] = api
-                table.insert(conns, row.MouseButton1Click:Connect(function()
-                    if popup then change(opt, not selected[opt], false) end
-                end))
+            local listFrame = makeListScroll(popup, POPUP_HEADER + searchH, listH)
+            local searchBox
+            local rowBtns, rowConns = {}, {}
+            local function buildRows()
+                for _, c in ipairs(rowConns) do pcall(function() c:Disconnect() end) end
+                for _, b in ipairs(rowBtns) do pcall(function() b:Destroy() end) end
+                rowConns, rowBtns, rowApis = {}, {}, {}
+                local q = searchBox and string.lower(tostring(searchBox.Text or "")) or ""
+                local shown = 0
+                for _, opt in ipairs(items) do
+                    if q == "" or string.find(string.lower(tostring(opt)), q, 1, true) then
+                        shown = shown + 1
+                        if shown > 120 then break end
+                        local row, api = makeRow(listFrame, opt, selected[opt], shown, ROW_H, true)
+                        rowBtns[#rowBtns + 1] = row
+                        rowApis[opt] = api
+                        table.insert(rowConns, row.MouseButton1Click:Connect(function()
+                            if popup then change(opt, not selected[opt], false) end
+                        end))
+                    end
+                end
             end
+            if searchable then
+                local sc = newT("Frame", {
+                    BackgroundColor3 = Theme.InputBg, BorderSizePixel = 0, ZIndex = 2,
+                    Size = UDim2.new(1, -20, 0, 34), Position = UDim2.fromOffset(10, POPUP_HEADER + 4), Parent = popup.Body,
+                })
+                corner(sc, 10)
+                local scStroke = newT("UIStroke", {
+                    Color = Theme.Stroke, Transparency = 0.4, Thickness = 1,
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = sc,
+                })
+                searchBox = newT("TextBox", {
+                    BackgroundTransparency = 1, Size = UDim2.new(1, -20, 1, 0), Position = UDim2.fromOffset(12, 0), ZIndex = 3,
+                    Font = Enum.Font.BuilderSans, TextSize = 13, TextColor3 = Theme.Text, PlaceholderColor3 = Theme.SubText2,
+                    PlaceholderText = "Search...", Text = "", ClearTextOnFocus = false,
+                    TextXAlignment = Enum.TextXAlignment.Left, Parent = sc,
+                })
+                table.insert(conns, searchBox:GetPropertyChangedSignal("Text"):Connect(buildRows))
+                table.insert(conns, searchBox.Focused:Connect(function() tween(scStroke, 0.15, { Color = Theme.Accent, Transparency = 0.1 }) end))
+                table.insert(conns, searchBox.FocusLost:Connect(function() tween(scStroke, 0.2, { Color = Theme.Stroke, Transparency = 0.4 }) end))
+            end
+            buildRows()
 
             popup.Show()
             tween(chevron, 0.25, { Rotation = 180 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
